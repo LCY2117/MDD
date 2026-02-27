@@ -1,0 +1,369 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  
+  /* 温和的低饱和蓝绿色系 - 默认主题色 */
+  --background: #FAF8F5; /* 米白色背景 */
+  --foreground: #3A3A3A; /* 柔和的深灰文字 */
+  
+  --card: #FFFFFF;
+  --card-foreground: #3A3A3A;
+  
+  --popover: #FFFFFF;
+  --popover-foreground: #3A3A3A;
+  
+  --primary: #5FA9A3; /* 低饱和青绿色 - 主色调 */
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #E8F3F2; /* 极淡的青绿色 */
+  --secondary-foreground: #3A3A3A;
+  
+  --muted: #F5F5F5;
+  --muted-foreground: #878787;
+  
+  --accent: #D4E8E6; /* 淡青绿色 */
+  --accent-foreground: #3A3A3A;
+  
+  --destructive: #E07676; /* 柔和的红色（用于删除等） */
+  --destructive-foreground: #FFFFFF;
+  
+  --warning: #E8B563; /* 温和的橙黄色（用于提醒） */
+  --warning-foreground: #3A3A3A;
+  
+  --success: #7CB37C; /* 柔和的绿色 */
+  --success-foreground: #FFFFFF;
+  
+  --border: rgba(95, 169, 163, 0.15);
+  --input: rgba(95, 169, 163, 0.2);
+  --input-background: #FFFFFF;
+  --switch-background: #D9D9D9;
+  
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  
+  --ring: rgba(95, 169, 163, 0.3);
+  
+  /* 图表色系 - 温和柔和 */
+  --chart-1: #5FA9A3;
+  --chart-2: #8BC4BE;
+  --chart-3: #7CB37C;
+  --chart-4: #B8AED8;
+  --chart-5: #E8B563;
+  
+  /* 圆角 - 柔和温和 */
+  --radius: 0.75rem; /* 12px */
+  
+  /* 间距系统 */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-2xl: 3rem; /* 48px */
+  
+  /* 阴影系统 - 微妙柔和 */
+  --shadow-sm: 0 1px 3px rgba(95, 169, 163, 0.08);
+  --shadow-md: 0 4px 12px rgba(95, 169, 163, 0.1);
+  --shadow-lg: 0 8px 24px rgba(95, 169, 163, 0.12);
+  
+  /* 字体大小 */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #3A3A3A;
+  --sidebar-primary: #5FA9A3;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5F5F5;
+  --sidebar-accent-foreground: #3A3A3A;
+  --sidebar-border: rgba(95, 169, 163, 0.15);
+  --sidebar-ring: rgba(95, 169, 163, 0.3);
+}
+
+/* 主题色方案：温和薄荷 */
+.theme-mint {
+  --primary: #7B9E89;
+  --secondary: #E8F2ED;
+  --accent: #D4E8DF;
+  --border: rgba(123, 158, 137, 0.15);
+  --input: rgba(123, 158, 137, 0.2);
+  --ring: rgba(123, 158, 137, 0.3);
+  --shadow-sm: 0 1px 3px rgba(123, 158, 137, 0.08);
+  --shadow-md: 0 4px 12px rgba(123, 158, 137, 0.1);
+  --shadow-lg: 0 8px 24px rgba(123, 158, 137, 0.12);
+  --sidebar-primary: #7B9E89;
+  --sidebar-border: rgba(123, 158, 137, 0.15);
+  --sidebar-ring: rgba(123, 158, 137, 0.3);
+  --chart-1: #7B9E89;
+  --chart-2: #9BB8A7;
+}
+
+.theme-mint.dark {
+  --primary: #8BAD99;
+  --secondary: #2D3631;
+  --accent: #3A4740;
+  --border: rgba(139, 173, 153, 0.15);
+  --input: rgba(139, 173, 153, 0.2);
+  --ring: rgba(139, 173, 153, 0.35);
+  --sidebar-primary: #8BAD99;
+  --sidebar-border: rgba(139, 173, 153, 0.15);
+  --sidebar-ring: rgba(139, 173, 153, 0.35);
+}
+
+/* 主题色方案：柔和灰绿 */
+.theme-sage {
+  --primary: #95A99F;
+  --secondary: #EEF1EF;
+  --accent: #DDE4E0;
+  --border: rgba(149, 169, 159, 0.15);
+  --input: rgba(149, 169, 159, 0.2);
+  --ring: rgba(149, 169, 159, 0.3);
+  --shadow-sm: 0 1px 3px rgba(149, 169, 159, 0.08);
+  --shadow-md: 0 4px 12px rgba(149, 169, 159, 0.1);
+  --shadow-lg: 0 8px 24px rgba(149, 169, 159, 0.12);
+  --sidebar-primary: #95A99F;
+  --sidebar-border: rgba(149, 169, 159, 0.15);
+  --sidebar-ring: rgba(149, 169, 159, 0.3);
+  --chart-1: #95A99F;
+  --chart-2: #AAC0B5;
+}
+
+.theme-sage.dark {
+  --primary: #A5B9AF;
+  --secondary: #2F3533;
+  --accent: #3D4542;
+  --border: rgba(165, 185, 175, 0.15);
+  --input: rgba(165, 185, 175, 0.2);
+  --ring: rgba(165, 185, 175, 0.35);
+  --sidebar-primary: #A5B9AF;
+  --sidebar-border: rgba(165, 185, 175, 0.15);
+  --sidebar-ring: rgba(165, 185, 175, 0.35);
+}
+
+/* 主题色方案：淡雅灰蓝 */
+.theme-blue-gray {
+  --primary: #8B9EB7;
+  --secondary: #EDF1F5;
+  --accent: #DBE4ED;
+  --border: rgba(139, 158, 183, 0.15);
+  --input: rgba(139, 158, 183, 0.2);
+  --ring: rgba(139, 158, 183, 0.3);
+  --shadow-sm: 0 1px 3px rgba(139, 158, 183, 0.08);
+  --shadow-md: 0 4px 12px rgba(139, 158, 183, 0.1);
+  --shadow-lg: 0 8px 24px rgba(139, 158, 183, 0.12);
+  --sidebar-primary: #8B9EB7;
+  --sidebar-border: rgba(139, 158, 183, 0.15);
+  --sidebar-ring: rgba(139, 158, 183, 0.3);
+  --chart-1: #8B9EB7;
+  --chart-2: #A5B5CA;
+}
+
+.theme-blue-gray.dark {
+  --primary: #9BAEC7;
+  --secondary: #2C3238;
+  --accent: #3A4249;
+  --border: rgba(155, 174, 199, 0.15);
+  --input: rgba(155, 174, 199, 0.2);
+  --ring: rgba(155, 174, 199, 0.35);
+  --sidebar-primary: #9BAEC7;
+  --sidebar-border: rgba(155, 174, 199, 0.15);
+  --sidebar-ring: rgba(155, 174, 199, 0.35);
+}
+
+/* 主题色方案：温柔灰紫 */
+.theme-lavender {
+  --primary: #A8B5C7;
+  --secondary: #F0F2F6;
+  --accent: #E0E5ED;
+  --border: rgba(168, 181, 199, 0.15);
+  --input: rgba(168, 181, 199, 0.2);
+  --ring: rgba(168, 181, 199, 0.3);
+  --shadow-sm: 0 1px 3px rgba(168, 181, 199, 0.08);
+  --shadow-md: 0 4px 12px rgba(168, 181, 199, 0.1);
+  --shadow-lg: 0 8px 24px rgba(168, 181, 199, 0.12);
+  --sidebar-primary: #A8B5C7;
+  --sidebar-border: rgba(168, 181, 199, 0.15);
+  --sidebar-ring: rgba(168, 181, 199, 0.3);
+  --chart-1: #A8B5C7;
+  --chart-2: #BCC6D5;
+}
+
+.theme-lavender.dark {
+  --primary: #B8C5D7;
+  --secondary: #2E3239;
+  --accent: #3C4249;
+  --border: rgba(184, 197, 215, 0.15);
+  --input: rgba(184, 197, 215, 0.2);
+  --ring: rgba(184, 197, 215, 0.35);
+  --sidebar-primary: #B8C5D7;
+  --sidebar-border: rgba(184, 197, 215, 0.15);
+  --sidebar-ring: rgba(184, 197, 215, 0.35);
+}
+
+.dark {
+  --background: #1A1D1E; /* 更深、更柔和的背景 */
+  --foreground: #E0E0E0; /* 柔和的浅灰文字 */
+  --card: #252829; /* 深灰卡片背景 */
+  --card-foreground: #E0E0E0;
+  --popover: #252829;
+  --popover-foreground: #E0E0E0;
+  --primary: #6FB8B2; /* 稍微提亮的青绿色,保持低饱和 */
+  --primary-foreground: #FFFFFF;
+  --secondary: #2D3537; /* 深青绿灰 */
+  --secondary-foreground: #E0E0E0;
+  --muted: #2D3235; /* 深灰 */
+  --muted-foreground: #9BA1A6; /* 柔和的灰色 */
+  --accent: #3A4645; /* 深青绿色调 */
+  --accent-foreground: #E0E0E0;
+  --destructive: #D88A8A; /* 保持温和的红色 */
+  --destructive-foreground: #FFFFFF;
+  --warning: #E8B563; /* 温和的橙黄色 */
+  --warning-foreground: #1A1D1E;
+  --success: #7CB37C; /* 柔和的绿色 */
+  --success-foreground: #FFFFFF;
+  --border: rgba(111, 184, 178, 0.15); /* 降低透明度 */
+  --input: rgba(111, 184, 178, 0.2);
+  --input-background: #252829;
+  --switch-background: #3A3A3A;
+  --ring: rgba(111, 184, 178, 0.35);
+  --sidebar: #252829;
+  --sidebar-foreground: #E0E0E0;
+  --sidebar-primary: #6FB8B2;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #2D3235;
+  --sidebar-accent-foreground: #E0E0E0;
+  --sidebar-border: rgba(111, 184, 178, 0.15);
+  --sidebar-ring: rgba(111, 184, 178, 0.35);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  /* 主题色过渡动画 */
+  :root,
+  .theme-teal,
+  .theme-mint,
+  .theme-sage,
+  .theme-blue-gray,
+  .theme-lavender {
+    transition: 
+      --primary 0.4s ease,
+      --secondary 0.4s ease,
+      --accent 0.4s ease,
+      --border 0.4s ease,
+      --input 0.4s ease,
+      --ring 0.4s ease;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+  
+  p {
+    line-height: 1.7;
+  }
+}
