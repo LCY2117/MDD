@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/database.js';
 import { authenticate } from '../middleware/auth.js';
@@ -11,46 +11,64 @@ const router = Router();
  */
 router.get('/members', authenticate, (req, res) => {
   const user = db.prepare('SELECT user_mode FROM users WHERE id = ?').get(req.userId);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const getMoodToday = db.prepare(
+    `SELECT mood, created_at FROM mood_entries WHERE user_id = ? AND date = ? ORDER BY created_at DESC LIMIT 1`
+  );
 
   let members = [];
   if (user.user_mode === 'patient') {
     // 患者获取家属列表
     const bindings = db.prepare(`
-      SELECT fb.*, u.id, u.nickname, u.avatar, u.last_active, fb.relation
+      SELECT fb.id as bindingId, fb.caregiver_id, fb.relation, fb.share_mood,
+             u.id as userId, u.nickname, u.avatar, u.last_active
       FROM family_bindings fb
       JOIN users u ON fb.caregiver_id = u.id
       WHERE fb.patient_id = ?
     `).all(req.userId);
 
-    members = bindings.map(b => ({
-      id: b.id,
-      userId: b.caregiver_id,
-      name: b.nickname,
-      avatar: b.avatar,
-      role: 'caregiver',
-      relation: b.relation,
-      status: isOnline(b.last_active) ? 'online' : 'offline',
-      shareMood: !!b.share_mood,
-    }));
+    members = bindings.map(b => {
+      const mood = getMoodToday.get(b.userId, today);
+      return {
+        id: b.bindingId,
+        userId: b.userId,
+        nickname: b.nickname,
+        avatar: b.avatar,
+        role: 'caregiver',
+        relation: b.relation,
+        status: isOnline(b.last_active) ? 'online' : 'offline',
+        shareMood: !!b.share_mood,
+        todayMood: mood?.mood || null,
+        lastMoodAt: mood?.created_at || null,
+      };
+    });
   } else {
     // 家属获取被照顾者列表
     const bindings = db.prepare(`
-      SELECT fb.*, u.id, u.nickname, u.avatar, u.last_active, fb.relation
+      SELECT fb.id as bindingId, fb.patient_id, fb.relation, fb.share_mood,
+             u.id as userId, u.nickname, u.avatar, u.last_active
       FROM family_bindings fb
       JOIN users u ON fb.patient_id = u.id
       WHERE fb.caregiver_id = ?
     `).all(req.userId);
 
-    members = bindings.map(b => ({
-      id: b.id,
-      userId: b.patient_id,
-      name: b.nickname,
-      avatar: b.avatar,
-      role: 'patient',
-      relation: b.relation,
-      status: isOnline(b.last_active) ? 'online' : 'offline',
-      shareMood: !!b.share_mood,
-    }));
+    members = bindings.map(b => {
+      // 只在患者允许共享情绪时才查询情绪
+      const mood = b.share_mood ? getMoodToday.get(b.userId, today) : null;
+      return {
+        id: b.bindingId,
+        userId: b.userId,
+        nickname: b.nickname,
+        avatar: b.avatar,
+        role: 'patient',
+        relation: b.relation,
+        status: isOnline(b.last_active) ? 'online' : 'offline',
+        shareMood: !!b.share_mood,
+        todayMood: mood?.mood || null,
+        lastMoodAt: mood?.created_at || null,
+      };
+    });
   }
 
   res.json({ success: true, data: members });
@@ -222,6 +240,52 @@ router.put('/settings', authenticate, (req, res) => {
   }
 
   res.json({ success: true, message: '设置已更新' });
+});
+
+/**
+ * GET /api/family/has-bindings
+ * 检查当前用户是否有家庭绑定（用于锁定角色切换）
+ */
+router.get('/has-bindings', authenticate, (req, res) => {
+  const row = db.prepare(
+    `SELECT COUNT(*) as cnt FROM family_bindings WHERE patient_id = ? OR caregiver_id = ?`
+  ).get(req.userId, req.userId);
+  res.json({ success: true, data: { hasBindings: row.cnt > 0, count: row.cnt } });
+});
+
+/**
+ * POST /api/family/sos
+ * 患者向所有家属发送求救信号
+ */
+router.post('/sos', authenticate, (req, res) => {
+  const { message } = req.body;
+  const sosText = message?.trim() || '我现在很难受，需要帮助！';
+
+  const currentUser = db.prepare('SELECT user_mode, nickname FROM users WHERE id = ?').get(req.userId);
+  if (currentUser.user_mode !== 'patient') {
+    return res.status(403).json({ success: false, message: '只有患者可以发送求救信号' });
+  }
+
+  const caregivers = db.prepare(
+    `SELECT caregiver_id FROM family_bindings WHERE patient_id = ?`
+  ).all(req.userId);
+
+  if (caregivers.length === 0) {
+    return res.status(400).json({ success: false, message: '还没有绑定家属' });
+  }
+
+  const now = new Date().toISOString();
+  const insertNotif = db.prepare(`
+    INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
+    VALUES (?, ?, 'family', ?, ?, 0, ?)
+  `);
+
+  for (const cg of caregivers) {
+    const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+    insertNotif.run(notifId, cg.caregiver_id, req.userId, `🆘 求救信号：${sosText}`, now);
+  }
+
+  res.status(201).json({ success: true, message: `求救信号已发送给 ${caregivers.length} 位家属` });
 });
 
 /**

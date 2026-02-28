@@ -19,6 +19,7 @@ type Tab = 'hot' | 'latest' | 'following' | 'knowledge'
 const activeTab = ref<Tab>('hot')
 const searchQuery = ref('')
 const showFilters = ref(false)
+const activeFilter = ref('全部')
 const posts = ref<Post[]>([])
 const isLoading = ref(false)
 
@@ -52,14 +53,32 @@ async function loadPosts() {
 watch(activeTab, loadPosts, { immediate: true })
 
 const filteredPosts = ref<Post[]>([])
-watch([posts, searchQuery], () => {
+watch([posts, searchQuery, activeFilter], () => {
+  let base = posts.value
+  if (activeFilter.value !== '全部') {
+    base = base.filter(p => p.tags?.includes(activeFilter.value))
+  }
   filteredPosts.value = searchQuery.value
-    ? posts.value.filter(p =>
+    ? base.filter(p =>
         p.content.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
         p.tags?.some(t => t.toLowerCase().includes(searchQuery.value.toLowerCase()))
       )
-    : posts.value
+    : base
 }, { immediate: true })
+
+async function handleFavorite(postId: string) {
+  if (!isAuthenticated.value) { toast.info('登录后可以收藏帖子'); return }
+  try {
+    const res = await postApi.toggleFavorite(postId)
+    const post = posts.value.find(p => p.id === postId)
+    if (post) post.isFavorited = (res.data as { isFavorited: boolean }).isFavorited
+    toast.success(post?.isFavorited ? '已收藏' : '已取消收藏')
+  } catch { toast.error('操作失败') }
+}
+
+function handleMessage(authorId: string) {
+  router.push(`/messages/${authorId}`)
+}
 
 async function handleLike(postId: string) {
   if (!isAuthenticated.value) { toast.info('登录后可以点赞帖子'); return }
@@ -105,7 +124,9 @@ async function handleLike(postId: string) {
           <h4 class="mb-3">话题筛选</h4>
           <div class="flex flex-wrap gap-2">
             <button v-for="f in ['全部','经验分享','自我照顾','求助','陪伴','康复日记']" :key="f"
-              class="px-4 py-2 rounded-lg bg-secondary hover:bg-accent text-sm transition-colors">
+              class="px-4 py-2 rounded-lg text-sm transition-colors"
+              :class="activeFilter === f ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-accent'"
+              @click="activeFilter = f">
               {{ f }}
             </button>
           </div>
@@ -169,7 +190,7 @@ async function handleLike(postId: string) {
       <template v-else>
         <LoadingState v-if="isLoading" />
         <div v-else-if="filteredPosts.length" class="space-y-3">
-          <PostCard v-for="post in filteredPosts" :key="post.id" :post="post" @like="handleLike" />
+          <PostCard v-for="post in filteredPosts" :key="post.id" :post="post" @like="handleLike" @favorite="handleFavorite" @message="handleMessage" />
         </div>
         <EmptyState v-else :icon="Search" title="没有找到相关内容" description="试试其他关键词，或者浏览全部内容">
           <button v-if="searchQuery" class="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors text-sm" @click="searchQuery = ''">

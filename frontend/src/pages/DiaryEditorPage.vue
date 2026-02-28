@@ -5,10 +5,12 @@ import { ArrowLeft, Save, Trash2, Lock, Globe } from 'lucide-vue-next'
 import { diaryApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/lib/useConfirm'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { confirm } = useConfirm()
 
 const entryId = route.params.id as string
 const isEditing = entryId && entryId !== 'new'
@@ -57,7 +59,8 @@ async function handleSave() {
 
 async function handleDelete() {
   if (!isEditing) return
-  if (!confirm('确定删除这篇日记吗？')) return
+  const ok = await confirm({ title: '删除日记', message: '确定要删除这篇日记吗？删除后无法恢复。', confirmText: '删除', cancelText: '取消', variant: 'danger' })
+  if (!ok) return
   try { await diaryApi.deleteDiary(entryId); toast.success('日记已删除'); router.back() }
   catch { toast.error('删除失败') }
 }

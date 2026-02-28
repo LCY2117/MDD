@@ -25,7 +25,7 @@ interface MoodEntry {
 const moods = [
   { id: 'sunny', icon: Sun, label: '还不错', color: 'text-yellow-500', bgColor: 'bg-yellow-50', score: 3 },
   { id: 'cloudy', icon: Cloud, label: '一般般', color: 'text-gray-400', bgColor: 'bg-gray-50', score: 2 },
-  { id: 'rainy', icon: CloudRain, label: '有点难', color: 'text-blue-400', bgColor: 'bg-blue-50', score: 1 },
+  { id: 'rainy', icon: CloudRain, label: '有点难受', color: 'text-blue-400', bgColor: 'bg-blue-50', score: 1 },
 ]
 
 const entries = ref<MoodEntry[]>([])
@@ -39,10 +39,10 @@ onMounted(() => {
   if (!authStore.isAuthenticated) { isLoading.value = false; return }
   moodApi.getMoods(7)
     .then(res => {
-      const raw = res.data as Array<{ id: string; mood: string; note?: string; recorded_at: string }>
+      const raw = res.data as Array<{ id: string; mood: string; note?: string; date: string; createdAt: string }>
       entries.value = raw.map(e => ({
         id: e.id, mood: e.mood as 'sunny' | 'cloudy' | 'rainy',
-        note: e.note, date: e.recorded_at,
+        note: e.note, date: e.date || e.createdAt,
         score: e.mood === 'sunny' ? 3 : e.mood === 'cloudy' ? 2 : 1,
       }))
     })
@@ -159,7 +159,7 @@ async function handleAddMood() {
         <div class="bg-card rounded-2xl p-4 text-center border border-border/50"><div class="text-2xl font-medium text-primary mb-1">{{ avgScore }}</div><div class="text-xs text-muted-foreground">平均分</div></div>
         <div class="bg-yellow-50 rounded-2xl p-4 text-center border border-yellow-200"><div class="text-2xl font-medium text-yellow-600 mb-1">{{ sunnyDays }}</div><div class="text-xs text-muted-foreground">还不错</div></div>
         <div class="bg-gray-50 rounded-2xl p-4 text-center border border-gray-200"><div class="text-2xl font-medium text-gray-600 mb-1">{{ cloudyDays }}</div><div class="text-xs text-muted-foreground">一般般</div></div>
-        <div class="bg-blue-50 rounded-2xl p-4 text-center border border-blue-200"><div class="text-2xl font-medium text-blue-600 mb-1">{{ rainyDays }}</div><div class="text-xs text-muted-foreground">有点难</div></div>
+        <div class="bg-blue-50 rounded-2xl p-4 text-center border border-blue-200"><div class="text-2xl font-medium text-blue-600 mb-1">{{ rainyDays }}</div><div class="text-xs text-muted-foreground">有点难受</div></div>
       </div>
     </div>
 

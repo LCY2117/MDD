@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Crown, Check, Sparkles, Bot, BookOpen, Heart } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const showComingSoon = ref(false)
 
 const plans = [
   {
@@ -23,7 +27,7 @@ const plans = [
 function handleSubscribe(planId: string) {
   if (planId === 'free') return
   if (!auth.isAuthenticated) { toast.info('请先登录'); return }
-  toast.info('支付功能即将上线，敬请期待 💙')
+  showComingSoon.value = true
 }
 </script>
 
@@ -89,4 +93,16 @@ function handleSubscribe(planId: string) {
       <p class="text-xs text-muted-foreground text-center pb-4">订阅自动续费，可随时取消 · 支持支付宝/微信支付</p>
     </div>
   </div>
+
+  <!-- 即将上线弹窗 -->
+  <ConfirmDialog
+    :open="showComingSoon"
+    title="支付功能即将上线 💙"
+    message="我们正在紧锣密鼓地开发中，感谢你的支持与期待！上线后将第一时间通知你。"
+    confirm-text="好的，期待中"
+    cancel-text=""
+    variant="info"
+    @confirm="showComingSoon = false"
+    @cancel="showComingSoon = false"
+  />
 </template>

@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, nextTick, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, Send, Bot, User, Lightbulb, Phone, Trash2 } from 'lucide-vue-next'
 import { aiApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
+import { marked } from 'marked'
+
+marked.setOptions({ breaks: true, gfm: true })
+
+function renderMarkdown(text: string): string {
+  return marked.parse(text) as string
+}
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const messagesEndRef = ref<HTMLDivElement | null>(null)
 
@@ -30,7 +38,12 @@ function scrollToBottom() {
 
 // 加载历史记录
 onMounted(async () => {
-  if (!authStore.isAuthenticated) return
+  if (!authStore.isAuthenticated) {
+    // 未登录时检查 ?q=
+    const q = route.query.q as string
+    if (q) { input.value = q; nextTick(handleSend) }
+    return
+  }
   try {
     const res = await aiApi.getHistory()
     const history = res.data as Array<{ id: string; role: string; content: string; created_at: string }>
@@ -42,6 +55,9 @@ onMounted(async () => {
     }
   } catch { /* 静默处理 */ }
   scrollToBottom()
+  // 登录后也支持 ?q= 自动发送
+  const q = route.query.q as string
+  if (q) { input.value = q; nextTick(handleSend) }
 })
 
 async function handleSend() {
@@ -113,7 +129,8 @@ async function handleClearHistory() {
           </div>
           <div class="flex-1 max-w-[80%]" :class="{ 'flex justify-end': msg.role === 'user' }">
             <div class="rounded-2xl p-4" :class="msg.role === 'assistant' ? 'bg-card border border-border/50' : 'bg-primary text-primary-foreground'">
-              <p class="whitespace-pre-wrap leading-relaxed text-sm">{{ msg.content }}</p>
+              <div v-if="msg.role === 'assistant'" class="ai-markdown text-sm leading-relaxed" v-html="renderMarkdown(msg.content)" />
+              <p v-else class="whitespace-pre-wrap leading-relaxed text-sm">{{ msg.content }}</p>
               <span class="text-xs mt-2 block" :class="msg.role === 'assistant' ? 'text-muted-foreground' : 'text-primary-foreground/70'">
                 {{ msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }}
               </span>
@@ -159,3 +176,44 @@ async function handleClearHistory() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.ai-markdown :deep(p) { margin: 0.4em 0; }
+.ai-markdown :deep(p:first-child) { margin-top: 0; }
+.ai-markdown :deep(p:last-child) { margin-bottom: 0; }
+.ai-markdown :deep(h1),.ai-markdown :deep(h2),.ai-markdown :deep(h3) {
+  font-weight: 600; margin: 0.6em 0 0.3em; line-height: 1.3;
+}
+.ai-markdown :deep(h1) { font-size: 1.1em; }
+.ai-markdown :deep(h2) { font-size: 1.0em; }
+.ai-markdown :deep(h3) { font-size: 0.95em; }
+.ai-markdown :deep(ul),.ai-markdown :deep(ol) { padding-left: 1.3em; margin: 0.3em 0; }
+.ai-markdown :deep(ul) { list-style-type: disc; }
+.ai-markdown :deep(ol) { list-style-type: decimal; }
+.ai-markdown :deep(li) { margin: 0.2em 0; }
+.ai-markdown :deep(strong) { font-weight: 600; }
+.ai-markdown :deep(em) { font-style: italic; }
+.ai-markdown :deep(code) {
+  background: hsl(var(--secondary));
+  padding: 0.1em 0.3em;
+  border-radius: 0.25em;
+  font-size: 0.85em;
+  font-family: ui-monospace, monospace;
+}
+.ai-markdown :deep(pre) {
+  background: hsl(var(--secondary));
+  padding: 0.75em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.ai-markdown :deep(pre code) { background: none; padding: 0; }
+.ai-markdown :deep(blockquote) {
+  border-left: 3px solid hsl(var(--primary) / 0.4);
+  padding: 0.3em 0.75em;
+  margin: 0.4em 0;
+  opacity: 0.8;
+  font-style: italic;
+}
+.ai-markdown :deep(hr) { border: none; border-top: 1px solid hsl(var(--border)); margin: 0.6em 0; }
+</style>

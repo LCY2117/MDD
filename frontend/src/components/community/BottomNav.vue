@@ -1,14 +1,28 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { Home, Users, BookOpen, Bot, User } from 'lucide-vue-next'
+import { Home, Users, Bell, Bot, User } from 'lucide-vue-next'
+import { messageApi } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
+const unreadCount = ref(0)
+
+onMounted(async () => {
+  if (!auth.isAuthenticated) return
+  try {
+    const res = await messageApi.getUnreadCount()
+    const data = res.data as { notifications: number; messages: number }
+    unreadCount.value = data.notifications + data.messages
+  } catch { /* ignore */ }
+})
 
 const navItems = [
   { icon: Home, label: '首页', to: '/' },
   { icon: Users, label: '社区', to: '/community' },
   { icon: Bot, label: 'AI', to: '/ai-chat' },
-  { icon: BookOpen, label: '资源', to: '/resources' },
+  { icon: Bell, label: '消息', to: '/messages' },
   { icon: User, label: '我的', to: '/profile' },
 ]
 </script>
@@ -25,7 +39,13 @@ const navItems = [
           ? 'text-primary'
           : 'text-muted-foreground hover:text-foreground'"
       >
-        <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+        <div class="relative">
+          <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+          <span v-if="item.to === '/messages' && unreadCount > 0"
+            class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+            {{ unreadCount > 99 ? '99+' : unreadCount }}
+          </span>
+        </div>
         <span class="text-xs font-medium truncate">{{ item.label }}</span>
       </RouterLink>
     </div>

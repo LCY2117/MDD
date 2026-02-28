@@ -250,9 +250,15 @@ db.exec(`
     notify_family INTEGER DEFAULT 1,
     privacy_show_posts INTEGER DEFAULT 1,
     privacy_allow_message INTEGER DEFAULT 1,
+    privacy_hide_profile INTEGER DEFAULT 0,
+    privacy_allow_follow INTEGER DEFAULT 1,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 `);
+
+// 迁移：旧库可能缺少新增列
+try { db.exec(`ALTER TABLE user_settings ADD COLUMN privacy_hide_profile INTEGER DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE user_settings ADD COLUMN privacy_allow_follow INTEGER DEFAULT 1`); } catch {}
 
 // 插入种子数据
 const insertSeedData = db.transaction(() => {
@@ -271,10 +277,10 @@ const insertSeedData = db.transaction(() => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertUser.run('user_001', 'xiaoyu', '小雨', '', '慢慢来，一切都会好起来的', 'patient', '2024-01-15T00:00:00.000Z', now, now);
-  insertUser.run('user_002', 'xiaoyun', '小云', '', '每天进步一点点', 'patient', '2024-02-10T00:00:00.000Z', now, now);
-  insertUser.run('user_003', 'mama_01', '温柔的妈妈', '', '陪伴是最长情的告白', 'caregiver', '2024-03-05T00:00:00.000Z', now, now);
-  insertUser.run('user_004', 'xiaoxing', '小星', '', '星光不问赶路人', 'patient', '2024-04-20T00:00:00.000Z', now, now);
+  insertUser.run('user_001', 'xiaoyu', '小雨', 'https://api.dicebear.com/9.x/lorelei/svg?seed=xiaoyu&backgroundColor=b6e3f4', '慢慢来，一切都会好起来的', 'patient', '2024-01-15T00:00:00.000Z', now, now);
+  insertUser.run('user_002', 'xiaoyun', '小云', 'https://api.dicebear.com/9.x/lorelei/svg?seed=xiaoyun&backgroundColor=c0aede', '每天进步一点点', 'patient', '2024-02-10T00:00:00.000Z', now, now);
+  insertUser.run('user_003', 'mama_01', '温柔的妈妈', 'https://api.dicebear.com/9.x/lorelei/svg?seed=mama01&backgroundColor=d1f7c4', '陪伴是最长情的告白', 'caregiver', '2024-03-05T00:00:00.000Z', now, now);
+  insertUser.run('user_004', 'xiaoxing', '小星', 'https://api.dicebear.com/9.x/lorelei/svg?seed=xiaoxing&backgroundColor=ffd5dc', '星光不问赶路人', 'patient', '2024-04-20T00:00:00.000Z', now, now);
 
   // 插入示例帖子
   const insertPost = db.prepare(`
@@ -287,10 +293,10 @@ const insertSeedData = db.transaction(() => {
   const post3CreatedAt = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
   const post4CreatedAt = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-  insertPost.run('post_001', 'user_002', '分享一个帮助我度过低谷期的方法：每天写下三件小确幸。可以很简单，比如今天的阳光很好，或者喝到了喜欢的咖啡。慢慢地，会发现生活中还是有很多美好的。', 0, 1, 256, 45, post1CreatedAt, post1CreatedAt);
-  insertPost.run('post_002', 'user_001', '今天终于鼓起勇气去看了心理咨询师。虽然还是很紧张，但咨询师很温和，让我感觉被理解了。想告诉大家，寻求专业帮助不是软弱，是勇敢。', 1, 0, 342, 67, post2CreatedAt, post2CreatedAt);
-  insertPost.run('post_003', 'user_004', '给大家推荐一些我常听的舒缓音乐，在焦虑的时候听会好一些。希望也能帮到你们。', 0, 0, 89, 12, post3CreatedAt, post3CreatedAt);
-  insertPost.run('post_004', 'user_001', '今天第30天坚持吃药了。虽然效果还不是很明显，但我会继续坚持。相信会好起来的。', 1, 0, 178, 31, post4CreatedAt, post4CreatedAt);
+  insertPost.run('post_001', 'user_002', '分享一个帮助我度过低谷期的方法：每天写下三件小确幸。可以很简单，比如今天的阳光很好，或者喝到了喜欢的咖啡。慢慢地，会发现生活中还是有很多美好的。', 0, 1, 256, 10, post1CreatedAt, post1CreatedAt);
+  insertPost.run('post_002', 'user_001', '今天终于鼓起勇气去看了心理咨询师。虽然还是很紧张，但咨询师很温和，让我感觉被理解了。想告诉大家，寻求专业帮助不是软弱，是勇敢。', 1, 0, 342, 12, post2CreatedAt, post2CreatedAt);
+  insertPost.run('post_003', 'user_004', '给大家推荐一些我常听的舒缓音乐，在焦虑的时候听会好一些。希望也能帮到你们。', 0, 0, 89, 8, post3CreatedAt, post3CreatedAt);
+  insertPost.run('post_004', 'user_001', '今天第30天坚持吃药了。虽然效果还不是很明显，但我会继续坚持。相信会好起来的。', 1, 0, 178, 10, post4CreatedAt, post4CreatedAt);
 
   // 插入帖子标签
   const insertTag = db.prepare('INSERT INTO post_tags (post_id, tag) VALUES (?, ?)');
@@ -302,6 +308,63 @@ const insertSeedData = db.transaction(() => {
   insertTag.run('post_003', '放松');
   insertTag.run('post_004', '每日打卡');
   insertTag.run('post_004', '坚持');
+
+  // 插入评论
+  const insertComment = db.prepare(`
+    INSERT INTO comments (id, post_id, author_id, content, is_anonymous, like_count, parent_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const m = 60 * 1000;
+  const h = 3600 * 1000;
+
+  // post_001 评论（10条）
+  insertComment.run('cmt_101', 'post_001', 'user_001', '谢谢分享！我也要试试这个方法，感觉很简单又实在。', 0, 8, null, new Date(Date.now() - 55 * m).toISOString());
+  insertComment.run('cmt_102', 'post_001', 'user_003', '我也让孩子试过这个，真的慢慢会发现生活里有很多美好。', 0, 5, null, new Date(Date.now() - 50 * m).toISOString());
+  insertComment.run('cmt_103', 'post_001', 'user_004', '今天的小确幸是阳台的花开了一朵，哈哈。', 0, 12, null, new Date(Date.now() - 47 * m).toISOString());
+  insertComment.run('cmt_104', 'post_001', 'user_002', '坚持写了两周，感觉真的有些不一样了，推荐大家试试！', 0, 7, null, new Date(Date.now() - 43 * m).toISOString());
+  insertComment.run('cmt_105', 'post_001', 'user_001', '写着写着发现好多小美好以前都被自己忽略了。', 0, 4, null, new Date(Date.now() - 38 * m).toISOString());
+  insertComment.run('cmt_106', 'post_001', 'user_003', '作为家属也很推荐这个方法，简单又好坚持。', 0, 6, null, new Date(Date.now() - 32 * m).toISOString());
+  insertComment.run('cmt_107', 'post_001', 'user_004', '今天写的是喝到了一杯好喝的奶茶，好开心～', 0, 9, null, new Date(Date.now() - 28 * m).toISOString());
+  insertComment.run('cmt_108', 'post_001', 'user_001', '谢谢楼主分享，这篇帖子被置顶真的很有意义。', 0, 3, null, new Date(Date.now() - 22 * m).toISOString());
+  insertComment.run('cmt_109', 'post_001', 'user_002', '感觉这个方法让我更关注当下了，而不是一直担心未来。', 0, 11, null, new Date(Date.now() - 15 * m).toISOString());
+  insertComment.run('cmt_110', 'post_001', 'user_004', '继续加油！我们一起找生活里的小美好。', 0, 5, null, new Date(Date.now() - 8 * m).toISOString());
+
+  // post_002 评论（12条）
+  insertComment.run('cmt_201', 'post_002', 'user_002', '太勇敢了！为你鼓掌👏 第一步是最难的，你做到了！', 0, 14, null, new Date(Date.now() - 2 * h - 50 * m).toISOString());
+  insertComment.run('cmt_202', 'post_002', 'user_004', '寻求帮助真的是勇气的表现，不是软弱。支持你！', 0, 10, null, new Date(Date.now() - 2 * h - 40 * m).toISOString());
+  insertComment.run('cmt_203', 'post_002', 'user_003', '作为家属看到这条很感动，希望更多人能鼓起这个勇气。', 0, 8, null, new Date(Date.now() - 2 * h - 30 * m).toISOString());
+  insertComment.run('cmt_204', 'post_002', 'user_002', '我也预约了很久但一直没去，看到这条帖子决定下周去了。', 1, 16, null, new Date(Date.now() - 2 * h - 20 * m).toISOString());
+  insertComment.run('cmt_205', 'post_002', 'user_001', '第一次咨询确实紧张，之后会越来越顺的，加油！', 0, 7, null, new Date(Date.now() - 2 * h - 10 * m).toISOString());
+  insertComment.run('cmt_206', 'post_002', 'user_004', '希望你们的咨询顺利，慢慢来。', 0, 4, null, new Date(Date.now() - 1 * h - 55 * m).toISOString());
+  insertComment.run('cmt_207', 'post_002', 'user_003', '找对合适的咨询师很重要，祝你遇到good match！', 0, 6, null, new Date(Date.now() - 1 * h - 40 * m).toISOString());
+  insertComment.run('cmt_208', 'post_002', 'user_004', '我第一次去的时候手都在发抖，但聊完出来感觉轻松多了。', 1, 13, null, new Date(Date.now() - 1 * h - 25 * m).toISOString());
+  insertComment.run('cmt_209', 'post_002', 'user_001', '这条帖子给了我很大勇气，谢谢你分享。', 0, 9, null, new Date(Date.now() - 1 * h - 10 * m).toISOString());
+  insertComment.run('cmt_210', 'post_002', 'user_002', '一起加油！你不是一个人在走这段路。', 0, 11, null, new Date(Date.now() - 55 * m).toISOString());
+  insertComment.run('cmt_211', 'post_002', 'user_003', '感谢你愿意分享，很多在犹豫的人都需要这样的正能量。', 0, 8, null, new Date(Date.now() - 40 * m).toISOString());
+  insertComment.run('cmt_212', 'post_002', 'user_004', '帖子内容说到心坎里了，寻求帮助就是在帮助自己。', 0, 6, null, new Date(Date.now() - 25 * m).toISOString());
+
+  // post_003 评论（8条）
+  insertComment.run('cmt_301', 'post_003', 'user_001', '求歌单！！我焦虑的时候最需要这个。', 0, 7, null, new Date(Date.now() - 5 * h - 30 * m).toISOString());
+  insertComment.run('cmt_302', 'post_003', 'user_002', '音乐真的很有治愈效果，有时候比什么都管用。', 0, 5, null, new Date(Date.now() - 5 * h - 10 * m).toISOString());
+  insertComment.run('cmt_303', 'post_003', 'user_003', '我也给孩子放舒缓音乐，睡前听特别有效。', 0, 4, null, new Date(Date.now() - 4 * h - 40 * m).toISOString());
+  insertComment.run('cmt_304', 'post_003', 'user_004', '我最喜欢听古典钢琴曲，特别放松，推荐肖邦！', 0, 8, null, new Date(Date.now() - 4 * h - 10 * m).toISOString());
+  insertComment.run('cmt_305', 'post_003', 'user_001', '昨晚试了一下，真的睡得好多了，谢谢推荐！', 0, 6, null, new Date(Date.now() - 3 * h - 30 * m).toISOString());
+  insertComment.run('cmt_306', 'post_003', 'user_002', '推荐班得瑞的专辑，那种空灵感很治愈。', 0, 9, null, new Date(Date.now() - 2 * h - 50 * m).toISOString());
+  insertComment.run('cmt_307', 'post_003', 'user_004', '还有久石让的音乐，《Summer》和《Encore》超级治愈！', 0, 12, null, new Date(Date.now() - 2 * h).toISOString());
+  insertComment.run('cmt_308', 'post_003', 'user_003', '谢谢大家推荐，都记下来了，今晚就试试。', 0, 3, null, new Date(Date.now() - 1 * h).toISOString());
+
+  // post_004 评论（10条）
+  insertComment.run('cmt_401', 'post_004', 'user_002', '坚持住！你很棒，30天真的不容易！', 0, 10, null, new Date(Date.now() - 11 * h - 30 * m).toISOString());
+  insertComment.run('cmt_402', 'post_004', 'user_004', '加油！效果会慢慢来的，给自己多一些时间和耐心。', 0, 7, null, new Date(Date.now() - 11 * h).toISOString());
+  insertComment.run('cmt_403', 'post_004', 'user_001', '我也在坚持，咱们一起打卡！今天第18天。', 0, 9, null, new Date(Date.now() - 10 * h - 20 * m).toISOString());
+  insertComment.run('cmt_404', 'post_004', 'user_003', '规律服药很重要，你做得很好！作为家人看到这条很欣慰。', 0, 8, null, new Date(Date.now() - 9 * h - 40 * m).toISOString());
+  insertComment.run('cmt_405', 'post_004', 'user_002', '我第45天的时候真的感觉到变化了，加油，快了！', 1, 14, null, new Date(Date.now() - 8 * h - 30 * m).toISOString());
+  insertComment.run('cmt_406', 'post_004', 'user_004', '药物需要一些时间积累才能显效，不要因为暂时没感觉就放弃。', 0, 6, null, new Date(Date.now() - 7 * h).toISOString());
+  insertComment.run('cmt_407', 'post_004', 'user_001', '每坚持一天都是一个小胜利！为自己鼓掌。', 0, 11, null, new Date(Date.now() - 6 * h).toISOString());
+  insertComment.run('cmt_408', 'post_004', 'user_003', '看到大家这样互相鼓励，真的很温暖。', 0, 5, null, new Date(Date.now() - 5 * h).toISOString());
+  insertComment.run('cmt_409', 'post_004', 'user_002', '我们都在这里，你不是一个人在坚持。', 0, 13, null, new Date(Date.now() - 3 * h).toISOString());
+  insertComment.run('cmt_410', 'post_004', 'user_004', '经历过那段等待期真的很难，但过来了就不一样了，撑住！', 1, 16, null, new Date(Date.now() - 1 * h - 30 * m).toISOString());
 
   // 插入知识文章
   const insertArticle = db.prepare(`
@@ -464,12 +527,24 @@ const insertSeedData = db.transaction(() => {
     now
   );
 
+  // 插入情绪记录（今日数据，用于家庭关怀展示）
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const insertMood = db.prepare(`
+    INSERT INTO mood_entries (id, user_id, mood, score, note, date, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const moodAt1 = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const moodAt4 = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
+  insertMood.run('mood_001', 'user_001', 'cloudy', 2, '今天情绪一般，但还好', todayDate, moodAt1);
+  insertMood.run('mood_002', 'user_004', 'sunny', 3, '今天感觉不错！', todayDate, moodAt4);
+
   // 插入家庭绑定
   const insertFamily = db.prepare(`
     INSERT INTO family_bindings (id, patient_id, caregiver_id, relation, share_mood, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   insertFamily.run('bind_001', 'user_001', 'user_003', '妈妈', 1, now);
+  insertFamily.run('bind_002', 'user_004', 'user_003', '孩子', 1, now);
 
   console.log('种子数据插入成功！');
 });

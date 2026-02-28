@@ -76,6 +76,53 @@ router.get('/conversations/:id', authenticate, (req, res) => {
 });
 
 /**
+ * POST /api/messages/:convId/message
+ * 在已有会话中发送消息（凭 convId，不需要 userId）
+ */
+router.post('/:convId/message', authenticate, (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+    return res.status(400).json({ success: false, message: '消息内容不能为空' });
+  }
+
+  const conv = db.prepare(
+    'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'
+  ).get(req.params.convId, req.userId, req.userId);
+
+  if (!conv) {
+    return res.status(404).json({ success: false, message: '会话不存在或无权限' });
+  }
+
+  const now = new Date().toISOString();
+  const targetUserId = conv.user1_id === req.userId ? conv.user2_id : conv.user1_id;
+
+  db.prepare('UPDATE conversations SET last_message = ?, last_message_time = ? WHERE id = ?')
+    .run(content.trim(), now, conv.id);
+
+  const msgId = `msg_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+  db.prepare(
+    'INSERT INTO direct_messages (id, conversation_id, sender_id, content, is_read, created_at) VALUES (?, ?, ?, ?, 0, ?)'
+  ).run(msgId, conv.id, req.userId, content.trim(), now);
+
+  // 通知对方
+  const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+  db.prepare(`
+    INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
+    VALUES (?, ?, 'message', ?, ?, 0, ?)
+  `).run(notifId, targetUserId, req.userId, `给你发了一条私信：${content.trim().slice(0, 30)}${content.trim().length > 30 ? '...' : ''}`, now);
+
+  res.status(201).json({
+    success: true,
+    data: {
+      id: msgId,
+      senderId: req.userId,
+      content: content.trim(),
+      createdAt: now,
+    },
+  });
+});
+
+/**
  * POST /api/messages/conversations/:userId
  * 发送私信（自动创建会话）
  */
@@ -120,8 +167,8 @@ router.post('/conversations/:userId', authenticate, (req, res) => {
   const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
   db.prepare(`
     INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
-    VALUES (?, ?, 'system', ?, '你有一条新私信', 0, ?)
-  `).run(notifId, targetUserId, req.userId, now);
+    VALUES (?, ?, 'message', ?, ?, 0, ?)
+  `).run(notifId, targetUserId, req.userId, `给你发了一条私信：${content.trim().slice(0, 30)}${content.trim().length > 30 ? '...' : ''}`, now);
 
   res.status(201).json({
     success: true,
@@ -159,11 +206,21 @@ router.get('/notifications', authenticate, (req, res) => {
         ? { id: n.from_user_id, name: n.from_name, avatar: n.from_avatar }
         : null,
       content: n.content,
+      relatedPostId: n.related_post_id || null,
       relatedPost: n.post_preview ? `${n.post_preview}...` : null,
       isRead: !!n.is_read,
       createdAt: n.created_at,
     })),
   });
+});
+
+/**
+ * DELETE /api/messages/notifications
+ * 清空所有通知
+ */
+router.delete('/notifications', authenticate, (req, res) => {
+  db.prepare('DELETE FROM notifications WHERE user_id = ?').run(req.userId);
+  res.json({ success: true, message: '已清空所有通知' });
 });
 
 /**
@@ -191,6 +248,19 @@ router.get('/unread-count', authenticate, (req, res) => {
   `).get(req.userId, req.userId, req.userId).count;
 
   res.json({ success: true, data: { notifications: unreadNotifs, messages: unreadMessages, total: unreadNotifs + unreadMessages } });
+});
+
+/**
+ * GET /api/messages/conversation-with/:userId
+ * 查找与某用户的现有会话 ID（不存在则返回 null）
+ */
+router.get('/conversation-with/:userId', authenticate, (req, res) => {
+  const { userId } = req.params;
+  const [u1, u2] = [req.userId, userId].sort();
+  const conv = db.prepare(
+    'SELECT id FROM conversations WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)'
+  ).get(u1, u2, u2, u1);
+  res.json({ success: true, data: { conversationId: conv ? conv.id : null } });
 });
 
 export default router;

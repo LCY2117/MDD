@@ -39,6 +39,28 @@ async function toggleFollow() {
   } catch { toast.error('操作失败') }
   finally { isFollowLoading.value = false }
 }
+
+async function handleLike(postId: string) {
+  if (!auth.isAuthenticated) { toast.info('登录后可以点赞'); return }
+  try {
+    const res = await postApi.toggleLike(postId)
+    const post = posts.value.find(p => p.id === postId)
+    if (post) {
+      post.isLiked = (res.data as { isLiked: boolean }).isLiked
+      post.likes = post.isLiked ? post.likes + 1 : post.likes - 1
+    }
+  } catch { toast.error('操作失败') }
+}
+
+async function handleFavorite(postId: string) {
+  if (!auth.isAuthenticated) { toast.info('登录后可以收藏'); return }
+  try {
+    const res = await postApi.toggleFavorite(postId)
+    const post = posts.value.find(p => p.id === postId)
+    if (post) post.isFavorited = (res.data as { isFavorited: boolean }).isFavorited
+    toast.success(post?.isFavorited ? '已收藏' : '已取消收藏')
+  } catch { toast.error('操作失败') }
+}
 </script>
 
 <template>
@@ -86,7 +108,7 @@ async function toggleFollow() {
       <div class="px-6 py-4">
         <h4 class="mb-3">他的帖子（{{ posts.length }}）</h4>
         <div v-if="posts.length" class="space-y-3">
-          <PostCard v-for="post in posts" :key="post.id" :post="post" />
+          <PostCard v-for="post in posts" :key="post.id" :post="post" @like="handleLike" @favorite="handleFavorite" />
         </div>
         <div v-else class="text-center py-8 text-muted-foreground text-sm">还没有发帖</div>
       </div>

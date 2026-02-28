@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, Send, MoreVertical } from 'lucide-vue-next'
-import { messageApi } from '@/lib/api'
+import { messageApi, userApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const conversationId = route.params.id as string
+const rawId = route.params.id as string          // 可能是 userId 或 conv_xxx
 const messagesEndRef = ref<HTMLDivElement | null>(null)
 
 interface Msg { id: string; senderId: string; content: string; createdAt: string }
@@ -21,17 +21,50 @@ const input = ref('')
 const isSending = ref(false)
 const isLoading = ref(true)
 
+// 实际使用的 conversationId（可能在首次发消息后才确定）
+let convId = rawId.startsWith('conv_') ? rawId : ''
+// 当 rawId 是 userId 时使用：
+const targetUserId = rawId.startsWith('conv_') ? '' : rawId
+
 onMounted(async () => {
   try {
-    const res = await messageApi.getMessages(conversationId)
-    const data = res.data as { messages: Msg[]; otherUser: OtherUser }
-    messages.value = data.messages
-    otherUser.value = data.otherUser
+    if (convId) {
+      // 已有 convId，直接加载消息
+      await loadMessages(convId)
+    } else {
+      // rawId 是 userId，先查找现有会话
+      const findRes = await messageApi.getConversationWith(targetUserId)
+      const found = (findRes.data as { conversationId: string | null }).conversationId
+      if (found) {
+        convId = found
+        await loadMessages(convId)
+      } else {
+        // 无现有会话，需要加载对方用户信息
+        try {
+          const userRes = await userApi.getUser(targetUserId)
+          const u = userRes.data as any
+          otherUser.value = { id: u.id, nickname: u.nickname ?? u.name ?? '用户', avatar: u.avatar }
+        } catch { /* ignore */ }
+      }
+    }
   } catch { toast.error('加载失败') }
   finally { isLoading.value = false; scrollToBottom() }
 })
 
-import { nextTick } from 'vue'
+async function loadMessages(cid: string) {
+  const res = await messageApi.getMessages(cid)
+  const rawList = res.data as any[]
+  messages.value = rawList.map(m => ({
+    id: m.id,
+    senderId: m.sender?.id ?? m.senderId,
+    content: m.content,
+    createdAt: m.createdAt ?? m.created_at,
+  }))
+  // 推断对方用户
+  const other = rawList.find(m => (m.sender?.id ?? m.senderId) !== auth.user?.id)
+  if (other) otherUser.value = { id: other.sender?.id, nickname: other.sender?.name ?? '对方', avatar: other.sender?.avatar }
+}
+
 function scrollToBottom() { nextTick(() => messagesEndRef.value?.scrollIntoView({ behavior: 'smooth' })) }
 
 async function handleSend() {
@@ -41,9 +74,24 @@ async function handleSend() {
   const tmpMsg: Msg = { id: Date.now().toString(), senderId: auth.user?.id || '', content: text, createdAt: new Date().toISOString() }
   messages.value.push(tmpMsg); scrollToBottom()
   try {
-    const res = await messageApi.sendMessage(conversationId, text)
-    const idx = messages.value.findIndex(m => m.id === tmpMsg.id)
-    if (idx !== -1) messages.value[idx] = (res.data as { message: Msg }).message
+    let res: any
+    if (convId) {
+      // 已有会话
+      res = await messageApi.sendToConversation(convId, text)
+      const idx = messages.value.findIndex(m => m.id === tmpMsg.id)
+      if (idx !== -1) messages.value[idx] = res.data as Msg
+    } else {
+      // 首次发消息，自动创建会话
+      res = await messageApi.sendMessage(targetUserId, text)
+      const newConvId = (res.data as any).conversationId
+      if (newConvId) {
+        convId = newConvId
+        router.replace(`/messages/${convId}`)
+      }
+      const idx = messages.value.findIndex(m => m.id === tmpMsg.id)
+      if (idx !== -1) messages.value[idx] = { ...tmpMsg, id: (res.data as any).id ?? tmpMsg.id }
+    }
+    scrollToBottom()
   } catch { messages.value = messages.value.filter(m => m.id !== tmpMsg.id); toast.error('发送失败') }
   finally { isSending.value = false }
 }

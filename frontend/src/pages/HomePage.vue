@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
-import { Sun, Cloud, CloudRain, Heart, TrendingUp, BookOpen, Phone, ChevronRight, Bot } from 'lucide-vue-next'
+import { RouterLink, useRouter } from 'vue-router'
+import { Sun, Cloud, CloudRain, Heart, BookOpen, Phone, ChevronRight, Bot, LogIn } from 'lucide-vue-next'
 import BottomNav from '@/components/community/BottomNav.vue'
 import CrisisBanner from '@/components/community/CrisisBanner.vue'
 import PostCard from '@/components/community/PostCard.vue'
@@ -11,6 +11,7 @@ import { postApi, moodApi } from '@/lib/api'
 import { toast } from 'vue-sonner'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const user = computed(() => authStore.user)
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
@@ -22,15 +23,19 @@ const isLoadingPosts = ref(true)
 const moods = [
   { id: 'sunny', icon: Sun, label: '还不错', color: 'text-yellow-500' },
   { id: 'cloudy', icon: Cloud, label: '一般般', color: 'text-gray-400' },
-  { id: 'rainy', icon: CloudRain, label: '有点难', color: 'text-blue-400' },
+  { id: 'rainy', icon: CloudRain, label: '有点难受', color: 'text-blue-400' },
 ]
 
-const quickActions = [
+const quickActionsAll = [
   { icon: Bot, label: 'AI问答', to: '/ai-chat', color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20' },
   { icon: Heart, label: '情绪记录', to: '/mood', color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' },
-  { icon: BookOpen, label: '知识科普', to: '/resources', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
-  { icon: Phone, label: '紧急求助', to: '/resources', color: 'bg-primary/10 text-primary' },
+  { icon: BookOpen, label: '知识科普', to: '/community', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+  { icon: Phone, label: '紧急求助', to: '/help', color: 'bg-primary/10 text-primary' },
 ]
+const quickActions = computed(() => isAuthenticated.value
+  ? quickActionsAll
+  : quickActionsAll.filter(a => ['/community', '/help'].includes(a.to))
+)
 
 onMounted(() => {
   postApi.getPosts({ tab: 'hot', limit: 3 })
@@ -86,8 +91,22 @@ async function handleLike(postId: string) {
         <p class="text-muted-foreground">今天感觉怎么样？</p>
       </div>
 
-      <!-- 今日心情 -->
-      <div class="mt-6 bg-card rounded-2xl p-5 shadow-sm border border-border/50">
+      <!-- 未登录：登录引导卡 -->
+      <div v-if="!isAuthenticated" class="mt-6 bg-card rounded-2xl p-5 border border-primary/20 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <LogIn class="w-6 h-6 text-primary" />
+        </div>
+        <div class="flex-1">
+          <p class="font-medium text-sm">加入心语社区</p>
+          <p class="text-xs text-muted-foreground mt-0.5">登录后可记录心情、使用 AI 助手等更多功能</p>
+        </div>
+        <button class="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-xl hover:bg-primary/90 transition-colors flex-shrink-0" @click="router.push('/login')">
+          登录
+        </button>
+      </div>
+
+      <!-- 已登录：今日心情 -->
+      <div v-else class="mt-6 bg-card rounded-2xl p-5 shadow-sm border border-border/50">
         <h3 class="mb-4">今日心情</h3>
         <div class="flex gap-3">
           <button
@@ -114,7 +133,7 @@ async function handleLike(postId: string) {
 
     <!-- 快捷入口 -->
     <div class="px-6 mt-6">
-      <div class="grid grid-cols-4 gap-3">
+      <div :class="isAuthenticated ? 'grid grid-cols-4 gap-3' : 'grid grid-cols-2 gap-3'">
         <RouterLink v-for="action in quickActions" :key="action.label" :to="action.to">
           <div class="bg-card rounded-2xl p-3 text-center shadow-sm border border-border/50 hover:shadow-md transition-shadow">
             <div class="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center" :class="action.color">

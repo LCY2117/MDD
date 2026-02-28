@@ -63,6 +63,13 @@ router.put('/me', authenticate, (req, res) => {
     if (!['patient', 'caregiver'].includes(userMode)) {
       return res.status(400).json({ success: false, message: '用户模式无效' });
     }
+    // 检查是否有家庭绑定，有绑定则不允许切换角色
+    const bindingCount = db.prepare(
+      `SELECT COUNT(*) as cnt FROM family_bindings WHERE patient_id = ? OR caregiver_id = ?`
+    ).get(req.userId, req.userId);
+    if (bindingCount.cnt > 0) {
+      return res.status(409).json({ success: false, message: '已有家庭绑定关系，请先解除所有绑定后再修改身份' });
+    }
     updates.push('user_mode = ?');
     params.push(userMode);
   }
@@ -129,6 +136,34 @@ router.get('/:id', (req, res) => {
 });
 
 /**
+ * GET /api/users/:id/followers
+ * 获取粉丝列表
+ */
+router.get('/:id/followers', authenticate, (req, res) => {
+  const users = db.prepare(`
+    SELECT u.id, u.nickname, u.avatar, u.bio
+    FROM follows f JOIN users u ON f.follower_id = u.id
+    WHERE f.following_id = ?
+    ORDER BY f.created_at DESC LIMIT 100
+  `).all(req.params.id);
+  res.json({ success: true, data: users });
+});
+
+/**
+ * GET /api/users/:id/following
+ * 获取关注列表
+ */
+router.get('/:id/following', authenticate, (req, res) => {
+  const users = db.prepare(`
+    SELECT u.id, u.nickname, u.avatar, u.bio
+    FROM follows f JOIN users u ON f.following_id = u.id
+    WHERE f.follower_id = ?
+    ORDER BY f.created_at DESC LIMIT 100
+  `).all(req.params.id);
+  res.json({ success: true, data: users });
+});
+
+/**
  * POST /api/users/:id/follow
  * 关注/取消关注用户
  */
@@ -185,7 +220,7 @@ router.get('/me/settings', authenticate, (req, res) => {
  */
 router.put('/me/settings', authenticate, (req, res) => {
   const allowed = ['notify_likes', 'notify_comments', 'notify_follows', 'notify_system', 'notify_family',
-    'privacy_show_posts', 'privacy_allow_message'];
+    'privacy_show_posts', 'privacy_allow_message', 'privacy_hide_profile', 'privacy_allow_follow'];
 
   const updates = [];
   const params = [];
@@ -204,6 +239,35 @@ router.put('/me/settings', authenticate, (req, res) => {
 
   const settings = db.prepare('SELECT * FROM user_settings WHERE user_id = ?').get(req.userId);
   res.json({ success: true, message: '设置已更新', data: settings });
+});
+
+/**
+ * DELETE /api/users/me
+ * 注销当前账号（软删除：清空内容但保留 ID）
+ */
+router.delete('/me', authenticate, (req, res) => {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
+  if (!user) return res.status(404).json({ success: false, message: '用户不存在' });
+
+  // 清理用户数据
+  const deleteStmt = db.transaction(() => {
+    db.prepare('DELETE FROM post_likes WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM comment_likes WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM favorites WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM follows WHERE follower_id = ? OR following_id = ?').run(req.userId, req.userId);
+    db.prepare('DELETE FROM family_bindings WHERE patient_id = ? OR caregiver_id = ?').run(req.userId, req.userId);
+    db.prepare('DELETE FROM direct_messages WHERE sender_id = ?').run(req.userId);
+    db.prepare('DELETE FROM notifications WHERE user_id = ? OR from_user_id = ?').run(req.userId, req.userId);
+    db.prepare('DELETE FROM ai_chat_history WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM diary_entries WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM mood_entries WHERE user_id = ?').run(req.userId);
+    db.prepare('UPDATE users SET nickname = ?, bio = ?, avatar = ?, username = ? WHERE id = ?')
+      .run('已注销用户', '', '', `deleted_${req.userId}`, req.userId);
+  });
+  deleteStmt();
+
+  res.json({ success: true, message: '账号已注销' });
 });
 
 export default router;

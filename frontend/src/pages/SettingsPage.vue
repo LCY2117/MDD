@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, User, Sun, Moon, Monitor, Bell, Lock, HelpCircle, LogOut, ChevronRight, Heart } from 'lucide-vue-next'
+import { ArrowLeft, Sun, Moon, Monitor, Bell, Lock, HelpCircle, LogOut, ChevronRight, Heart, Info } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/lib/useConfirm'
 
 const router = useRouter()
 const auth = useAuthStore()
 const themeStore = useThemeStore()
+const { confirm } = useConfirm()
 
 const themes = [
   { id: 'light', label: '浅色', icon: Sun },
@@ -17,7 +19,8 @@ const themes = [
 ] as const
 
 async function handleLogout() {
-  if (!confirm('确定要退出登录吗？')) return
+  const ok = await confirm({ title: '退出登录', message: '确定要退出登录吗？退出后需要重新登录。', confirmText: '退出', cancelText: '取消', variant: 'warning' })
+  if (!ok) return
   auth.logout()
   toast.success('已退出登录')
   router.push('/welcome')
@@ -27,9 +30,8 @@ const menuSections = computed(() => [
   {
     title: '账号',
     items: [
-      { icon: User, label: '个人资料', action: () => router.push('/profile') },
-      { icon: Bell, label: '通知设置', action: () => router.push('/notifications') },
-      { icon: Lock, label: '隐私与安全', action: () => {} },
+      { icon: Bell, label: '通知设置', action: () => router.push('/settings/notifications') },
+      { icon: Lock, label: '隐私与安全', action: () => router.push('/settings/privacy') },
     ],
   },
   {
@@ -43,7 +45,7 @@ const menuSections = computed(() => [
     title: '支持',
     items: [
       { icon: HelpCircle, label: '帮助中心', action: () => router.push('/help') },
-      { icon: User, label: '关于心语社区', action: () => {} },
+      { icon: Info, label: '关于心语社区', action: () => router.push('/about') },
     ],
   },
 ])
@@ -58,19 +60,17 @@ const menuSections = computed(() => [
 
     <div class="px-6 py-4 space-y-5">
       <!-- 用户信息 -->
-      <button v-if="auth.isAuthenticated"
-        class="w-full bg-card rounded-2xl p-4 border border-border/50 hover:bg-secondary transition-colors flex items-center gap-3"
-        @click="router.push('/profile')">
+      <div v-if="auth.isAuthenticated"
+        class="w-full bg-card rounded-2xl p-4 border border-border/50 flex items-center gap-3">
         <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center overflow-hidden flex-shrink-0">
           <img v-if="auth.user?.avatar" :src="auth.user.avatar" alt="" class="w-full h-full object-cover" />
           <span v-else class="text-primary font-medium text-xl">{{ (auth.user?.nickname || '？')[0] }}</span>
         </div>
         <div class="flex-1 text-left">
           <p class="font-medium">{{ auth.user?.nickname || '用户' }}</p>
-          <p class="text-sm text-muted-foreground">查看个人主页</p>
+          <p class="text-sm text-muted-foreground">{{ auth.user?.email || '' }}</p>
         </div>
-        <ChevronRight class="w-5 h-5 text-muted-foreground" />
-      </button>
+      </div>
       <button v-else class="w-full py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors" @click="router.push('/login')">立即登录</button>
 
       <!-- 主题切换 -->

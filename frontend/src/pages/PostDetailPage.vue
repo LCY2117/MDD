@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowLeft, Heart, MessageSquare, Send, MoreVertical } from 'lucide-vue-next'
+import { ArrowLeft, Heart, MessageSquare, Send, MoreVertical, Bookmark, Flag, Trash2, X } from 'lucide-vue-next'
 import { postApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/lib/useConfirm'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,13 +13,16 @@ const auth = useAuthStore()
 const postId = route.params.id as string
 
 interface Comment { id: string; author: { id?: string; name: string; avatar?: string; isAnonymous?: boolean }; content: string; createdAt: string }
-interface PostDetail { id: string; author: { id: string; name: string; avatar?: string; isAnonymous?: boolean }; content: string; images?: string[]; tags?: string[]; likes: number; isLiked?: boolean; comments: number; createdAt: string }
+interface PostDetail { id: string; author: { id: string; name: string; avatar?: string; isAnonymous?: boolean }; content: string; images?: string[]; tags?: string[]; likes: number; isLiked?: boolean; isFavorited?: boolean; comments: number; createdAt: string }
 
 const post = ref<PostDetail | null>(null)
 const comments = ref<Comment[]>([])
 const isLoading = ref(true)
 const commentInput = ref('')
 const isSendingComment = ref(false)
+const isAnonymousComment = ref(false)
+const showMenu = ref(false)
+const { confirm } = useConfirm()
 
 onMounted(async () => {
   try {
@@ -39,12 +43,32 @@ async function toggleLike() {
   } catch { toast.error('操作失败') }
 }
 
+async function deletePost() {
+  const ok = await confirm({ title: '删除帖子', message: '确定要删除这篇帖子吗？此操作无法撤销。', confirmText: '删除', cancelText: '取消', variant: 'danger' })
+  if (!ok) return
+  try {
+    await postApi.deletePost(postId)
+    toast.success('帖子已删除')
+    router.back()
+  } catch { toast.error('删除失败') }
+}
+
+async function toggleFavorite() {
+  if (!auth.isAuthenticated) { toast.info('请先登录'); return }
+  if (!post.value) return
+  try {
+    const res = await postApi.toggleFavorite(postId)
+    post.value.isFavorited = (res.data as { isFavorited: boolean }).isFavorited
+    toast.success(post.value.isFavorited ? '已收藏' : '已取消收藏')
+  } catch { toast.error('操作失败') }
+}
+
 async function sendComment() {
   if (!commentInput.value.trim() || isSendingComment.value) return
   if (!auth.isAuthenticated) { toast.info('请先登录'); return }
   isSendingComment.value = true
   try {
-    const res = await postApi.createComment(postId, { content: commentInput.value.trim() })
+    const res = await postApi.createComment(postId, { content: commentInput.value.trim(), isAnonymous: isAnonymousComment.value })
     comments.value.unshift(res.data as Comment)
     if (post.value) post.value.comments += 1
     commentInput.value = ''; toast.success('评论已发布')
@@ -66,7 +90,27 @@ function formatTime(dateStr: string) {
     <div class="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-6 py-4 border-b border-border/50 flex items-center justify-between">
       <button class="p-2 hover:bg-secondary rounded-lg transition-colors" @click="router.back()"><ArrowLeft class="w-5 h-5" /></button>
       <h3>帖子详情</h3>
-      <button class="p-2 hover:bg-secondary rounded-lg transition-colors"><MoreVertical class="w-5 h-5" /></button>
+      <div class="relative">
+        <button class="p-2 hover:bg-secondary rounded-lg transition-colors" @click="showMenu = !showMenu"><MoreVertical class="w-5 h-5" /></button>
+        <Transition enter-active-class="transition-all duration-150" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition-all duration-100" leave-to-class="opacity-0 scale-95">
+          <div v-if="showMenu" class="absolute right-0 top-10 z-20 w-40 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+            <button class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors" @click="toggleFavorite(); showMenu = false">
+              <Bookmark class="w-4 h-4" :class="post?.isFavorited ? 'text-amber-500 fill-amber-500' : ''" />
+              {{ post?.isFavorited ? '取消收藏' : '收藏帖子' }}
+            </button>
+            <button v-if="post && !post.author.isAnonymous && post.author.id !== auth.user?.id" class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors" @click="router.push(`/messages/${post.author.id}`); showMenu = false">
+              <MessageSquare class="w-4 h-4" />私信博主
+            </button>
+            <button v-if="post && post.author.id === auth.user?.id" class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors text-destructive" @click="deletePost(); showMenu = false">
+              <Trash2 class="w-4 h-4" />删除帖子
+            </button>
+            <button v-else class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors text-rose-500" @click="showMenu = false">
+              <Flag class="w-4 h-4" />举报
+            </button>
+          </div>
+        </Transition>
+        <div v-if="showMenu" class="fixed inset-0 z-10" @click="showMenu = false" />
+      </div>
     </div>
 
     <div class="flex-1 overflow-y-auto">
@@ -102,6 +146,9 @@ function formatTime(dateStr: string) {
             <div class="flex items-center gap-2 text-muted-foreground">
               <MessageSquare class="w-5 h-5" /><span class="text-sm">{{ post.comments }}</span>
             </div>
+            <button class="flex items-center gap-2 transition-colors ml-auto" :class="post.isFavorited ? 'text-amber-500' : 'text-muted-foreground'" @click="toggleFavorite">
+              <Bookmark class="w-5 h-5" :fill="post.isFavorited ? 'currentColor' : 'none'" />
+            </button>
           </div>
         </div>
 
@@ -129,9 +176,19 @@ function formatTime(dateStr: string) {
     </div>
 
     <!-- 评论输入区 -->
-    <div class="sticky bottom-0 bg-background border-t border-border/50 px-6 py-4">
+    <div class="sticky bottom-0 bg-background border-t border-border/50 px-6 pt-3 pb-4">
+      <div class="flex items-center gap-2 mb-2">
+        <button
+          class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-colors"
+          :class="isAnonymousComment ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'"
+          @click="isAnonymousComment = !isAnonymousComment"
+        >
+          <span>{{ isAnonymousComment ? '匿名中' : '匿名评论' }}</span>
+        </button>
+        <span v-if="isAnonymousComment" class="text-xs text-muted-foreground">评论将以匿名方式发布</span>
+      </div>
       <div class="flex gap-3">
-        <input v-model="commentInput" type="text" placeholder="写下你的感想..."
+        <input v-model="commentInput" type="text" :placeholder="isAnonymousComment ? '匿名写下你的感想...' : '写下你的感想...'"
           class="flex-1 px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           @keydown.enter="sendComment" />
         <button :disabled="!commentInput.trim() || isSendingComment"

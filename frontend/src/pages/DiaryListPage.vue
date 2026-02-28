@@ -23,7 +23,7 @@ interface DiaryEntry {
 const entries = ref<DiaryEntry[]>([])
 const isLoading = ref(true)
 
-const moodLabel: Record<string, string> = { sunny: '😊 不错', cloudy: '😐 一般', rainy: '😔 有点难' }
+const moodLabel: Record<string, string> = { sunny: '😊 不错', cloudy: '😐 一般', rainy: '😔 有点难受' }
 
 onMounted(async () => {
   if (!auth.isAuthenticated) { router.push('/login'); return }

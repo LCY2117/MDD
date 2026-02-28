@@ -117,10 +117,19 @@ export const userApi = {
   getSettings: () => api.get<ApiResponse<Record<string, number>>>('/users/me/settings'),
 
   /** 更新用户设置 */
-  updateSettings: (settings: Record<string, boolean>) =>
+  updateSettings: (settings: Record<string, boolean | number>) =>
     api.put<ApiResponse<Record<string, number>>>('/users/me/settings', settings),
+
+  /** 获取粉丝列表 */
+  getFollowers: (userId: string) =>
+    api.get<ApiResponse<{ id: string; nickname: string; avatar: string; bio?: string }[]>>(`/users/${userId}/followers`),
+
+  /** 获取关注列表 */
+  getFollowing: (userId: string) =>
+    api.get<ApiResponse<{ id: string; nickname: string; avatar: string; bio?: string }[]>>(`/users/${userId}/following`),
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 // 帖子 API
 // ─────────────────────────────────────────────────────────────────────────────
@@ -234,19 +243,30 @@ export const messageApi = {
   getMessages: (conversationId: string) =>
     api.get<ApiResponse<unknown[]>>(`/messages/conversations/${conversationId}`),
 
-  /** 发送私信 */
+  /** 发送私信给用户（自动创建会话） */
   sendMessage: (userId: string, content: string) =>
     api.post<ApiResponse<unknown>>(`/messages/conversations/${userId}`, { content }),
 
+  /** 在已有会话中发送消息 */
+  sendToConversation: (convId: string, content: string) =>
+    api.post<ApiResponse<unknown>>(`/messages/${convId}/message`, { content }),
+
   /** 获取通知 */
-  getNotifications: () => api.get<ApiResponse<Notification[]>>('/messages/notifications'),
+  getNotifications: () => api.get<ApiResponse<unknown[]>>('/messages/notifications'),
 
   /** 标记全部已读 */
   markAllRead: () => api.post<ApiResponse<null>>('/messages/notifications/read-all'),
 
+  /** 查找与某用户的现有会话 */
+  getConversationWith: (userId: string) =>
+    api.get<ApiResponse<{ conversationId: string | null }>>(`/messages/conversation-with/${userId}`),
+
   /** 获取未读数 */
   getUnreadCount: () =>
     api.get<ApiResponse<{ notifications: number; messages: number; total: number }>>('/messages/unread-count'),
+
+  /** 清空所有通知 */
+  clearAllNotifications: () => api.delete<ApiResponse<null>>('/messages/notifications'),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -273,6 +293,9 @@ export const familyApi = {
   /** 获取家庭成员 */
   getMembers: () => api.get<ApiResponse<unknown[]>>('/family/members'),
 
+  /** 检查是否有家庭绑定关系 */
+  hasBindings: () => api.get<ApiResponse<{ hasBindings: boolean; count: number }>>('/family/has-bindings'),
+
   /** 获取家庭成员情绪 */
   getMemberMood: (patientId: string, days?: number) =>
     api.get<ApiResponse<unknown>>(`/family/mood/${patientId}${days ? `?days=${days}` : ''}`),
@@ -291,6 +314,10 @@ export const familyApi = {
   /** 发送鼓励 */
   sendEncouragement: (targetUserId: string, message: string) =>
     api.post<ApiResponse<null>>('/family/encourage', { targetUserId, message }),
+
+  /** 患者发送求救信号给所有家属 */
+  sendSOS: (message?: string) =>
+    api.post<ApiResponse<null>>('/family/sos', { message }),
 
   /** 更新情绪共享设置 */
   updateSettings: (shareMood: boolean, memberId?: string) =>

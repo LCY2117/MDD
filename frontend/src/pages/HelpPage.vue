@@ -10,7 +10,7 @@ const faqs = [
   { q: '心语社区能为我提供什么？', a: '心语社区提供同伴支持、情绪记录、AI辅助咨询、知识资源等服务。我们是辅助工具，不能替代专业诊断和治疗。' },
   { q: '我的隐私如何保护？', a: '所有数据均加密存储，匿名发帖时您的真实身份不会被其他用户看到。家人绑定功能只共享情绪状态，不共享日记等私密内容。' },
   { q: '如何使用家属关怀模式？', a: '在"我的"-"家人关怀"中，生成邀请码并分享给家人，或输入家人的邀请码完成绑定。绑定后可相互查看情绪状态。' },
-  { q: '忘记密码怎么办？', a: '目前支持微信授权登录，无需密码。如遇登录问题，请通过下方联系方式联系我们。' },
+  { q: '忘记密码怎么办？', a: '请联系我们。' },
   { q: 'AI助理是真人咨询师吗？', a: 'AI助理是人工智能系统，不是真人咨询师。它可以提供信息支持和情绪陪伴，但不能替代专业心理咨询或精神科诊疗。' },
 ]
 
@@ -72,7 +72,7 @@ function toggle(i: number) { openIndex.value = openIndex.value === i ? null : i 
             <span class="text-sm">AI 助理</span>
             <p class="text-xs text-muted-foreground text-center">7×24小时在线</p>
           </button>
-          <a href="mailto:support@xinyushequ.com" class="bg-card rounded-2xl p-4 border border-border/50 flex flex-col items-center gap-2 hover:bg-secondary transition-colors no-underline">
+          <a href="mailto:2833699673@qq.com" class="bg-card rounded-2xl p-4 border border-border/50 flex flex-col items-center gap-2 hover:bg-secondary transition-colors no-underline">
             <MessageSquare class="w-7 h-7 text-primary" />
             <span class="text-sm">邮件反馈</span>
             <p class="text-xs text-muted-foreground text-center">工作日24小时内回复</p>

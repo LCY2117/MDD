@@ -27,8 +27,15 @@ onMounted(async () => {
   if (!auth.isAuthenticated) { isLoading.value = false; return }
   try {
     const [convRes, notifRes] = await Promise.all([messageApi.getConversations(), messageApi.getNotifications()])
-    conversations.value = (convRes.data as { conversations: Conversation[] }).conversations
-    notifications.value = (notifRes.data as { notifications: typeof notifications.value }).notifications
+    // backend returns array directly; map field names (user→otherUser, lastMessageTime→createdAt)
+    const rawConvs = convRes.data as any[]
+    conversations.value = rawConvs.map(c => ({
+      id: c.id,
+      otherUser: { id: c.user?.id ?? '', nickname: c.user?.name ?? c.otherUser?.nickname ?? '用户', avatar: c.user?.avatar ?? c.otherUser?.avatar },
+      lastMessage: { content: c.lastMessage ?? c.last_message ?? '', createdAt: c.lastMessageTime ?? c.last_message_time ?? '' },
+      unreadCount: c.unreadCount ?? 0,
+    }))
+    notifications.value = (notifRes.data as any[]) ?? []
     unreadCount.value = notifications.value.filter(n => !n.isRead).length
   } catch { toast.error('加载失败') }
   finally { isLoading.value = false }

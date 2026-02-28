@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Shield, Eye, EyeOff } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const tab = ref<'login' | 'register'>('login')
@@ -16,6 +17,11 @@ const showConfirm = ref(false)
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', nickname: '', password: '', confirm: '' })
 
+function redirectAfterAuth() {
+  const redirect = route.query.redirect as string
+  router.push(redirect || '/')
+}
+
 async function handleLogin() {
   const { username, password } = loginForm.value
   if (!username.trim() || !password) { toast.error('请填写用户名和密码'); return }
@@ -23,7 +29,7 @@ async function handleLogin() {
   try {
     await authStore.login(username.trim(), password)
     toast.success('登录成功，欢迎回来！')
-    router.push('/')
+    redirectAfterAuth()
   } catch (e: any) {
     toast.error(e?.message || '用户名或密码错误')
   } finally {
@@ -41,7 +47,7 @@ async function handleRegister() {
   try {
     await authStore.register(username.trim(), nickname.trim(), password)
     toast.success('注册成功，欢迎加入！')
-    router.push('/')
+    redirectAfterAuth()
   } catch (e: any) {
     toast.error(e?.message || '注册失败，请重试')
   } finally {
