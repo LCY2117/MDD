@@ -16,5 +16,5 @@ onMounted(() => {
 
 <template>
   <RouterView />
-  <Toaster position="top-center" rich-colors />
+  <Toaster position="top-center" :rich-colors="true" expand />
 </template>

@@ -24,8 +24,6 @@ const moods = [
   { id: 'sunny', emoji: '☀️', label: '开心' },
   { id: 'cloudy', emoji: '⛅', label: '平静' },
   { id: 'rainy', emoji: '🌧️', label: '难过' },
-  { id: 'stormy', emoji: '⛈️', label: '烦躁' },
-  { id: 'rainbow', emoji: '🌈', label: '感恩' },
 ]
 
 const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })

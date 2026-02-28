@@ -92,9 +92,9 @@ const stats = [
     <!-- 功能入口 -->
     <div class="px-6 pb-4">
       <div class="grid grid-cols-2 gap-3">
-        <button class="bg-card rounded-xl p-4 border border-border/50 flex items-center gap-3 hover:bg-secondary transition-colors" @click="router.push('/diary/new')">
-          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Edit3 class="w-5 h-5 text-primary" /></div>
-          <span>写日记</span>
+        <button class="bg-card rounded-xl p-4 border border-border/50 flex items-center gap-3 hover:bg-secondary transition-colors" @click="router.push('/diary')">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><BookOpen class="w-5 h-5 text-primary" /></div>
+          <span>我的日记</span>
         </button>
         <button class="bg-card rounded-xl p-4 border border-border/50 flex items-center gap-3 hover:bg-secondary transition-colors" @click="router.push('/mood')">
           <div class="w-9 h-9 rounded-lg bg-yellow-100 flex items-center justify-center"><span class="text-lg">😊</span></div>

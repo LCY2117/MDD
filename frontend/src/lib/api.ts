@@ -335,12 +335,18 @@ export const uploadApi = {
     formData.append('image', file);
     const token = localStorage.getItem('token');
     const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
+    const serverOrigin = baseUrl.replace(/\/api$/, '');
     const response = await fetch(`${baseUrl}/upload/image`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
     if (!response.ok) throw new Error('上传失败');
-    return response.json();
+    const result: ApiResponse<{ url: string }> = await response.json();
+    // 将相对路径转为绝对 URL
+    if (result.data?.url && result.data.url.startsWith('/')) {
+      result.data.url = `${serverOrigin}${result.data.url}`;
+    }
+    return result;
   },
 };

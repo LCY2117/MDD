@@ -95,7 +95,7 @@ const displayArticles = computed(() =>
               <h4 class="mt-1.5 mb-1">{{ article.title }}</h4>
               <p class="text-sm text-muted-foreground line-clamp-2">{{ article.summary }}</p>
               <div class="mt-2 flex items-center justify-between">
-                <span class="text-xs text-muted-foreground">约{{ article.readTime }}分钟阅读</span>
+                <span class="text-xs text-muted-foreground">{{ article.readTime ? `约${article.readTime}分钟阅读` : '' }}</span>
                 <div class="flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                   <ExternalLink class="w-3 h-3" /><span>阅读</span>
                 </div>

@@ -21,6 +21,7 @@ const SearchPage = () => import('@/pages/SearchPage.vue')
 const SettingsPage = () => import('@/pages/SettingsPage.vue')
 const NotificationsPage = () => import('@/pages/NotificationsPage.vue')
 const DiaryEditorPage = () => import('@/pages/DiaryEditorPage.vue')
+const DiaryListPage = () => import('@/pages/DiaryListPage.vue')
 const HelpPage = () => import('@/pages/HelpPage.vue')
 const SubscriptionPage = () => import('@/pages/SubscriptionPage.vue')
 const NotFoundPage = () => import('@/pages/NotFoundPage.vue')
@@ -48,6 +49,7 @@ export const router = createRouter({
     { path: '/search', component: SearchPage },
     { path: '/settings', component: SettingsPage },
     { path: '/notifications', component: NotificationsPage },
+    { path: '/diary', component: DiaryListPage },
     { path: '/diary/new', component: DiaryEditorPage },
     { path: '/diary/:id', component: DiaryEditorPage },
     { path: '/help', component: HelpPage },

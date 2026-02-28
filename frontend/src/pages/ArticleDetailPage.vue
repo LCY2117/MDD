@@ -25,7 +25,11 @@ const isLoading = ref(true)
 onMounted(async () => {
   try {
     const res = await articleApi.getArticle(articleId)
-    article.value = (res.data as { article: Article }).article
+    const raw = res.data as any
+    article.value = {
+      ...raw,
+      readTime: raw.read_time ?? Math.max(1, Math.round((raw.content?.length ?? 0) / 400)),
+    }
   } catch { toast.error('文章加载失败') }
   finally { isLoading.value = false }
 })

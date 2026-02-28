@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Filter, TrendingUp, Clock, Heart, BookOpen, Video, FileText, ExternalLink, Sparkles } from 'lucide-vue-next'
+import { Search, Filter, TrendingUp, Clock, Heart, BookOpen, Video, FileText, ExternalLink, Sparkles, PenLine } from 'lucide-vue-next'
 import BottomNav from '@/components/community/BottomNav.vue'
 import PostCard from '@/components/community/PostCard.vue'
 import type { Post } from '@/components/community/PostCard.vue'
@@ -180,5 +180,13 @@ async function handleLike(postId: string) {
     </div>
 
     <BottomNav />
+
+    <!-- 发帖 FAB -->
+    <button
+      class="fixed bottom-20 right-5 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center"
+      @click="router.push('/publish')"
+    >
+      <PenLine class="w-6 h-6" />
+    </button>
   </div>
 </template>
