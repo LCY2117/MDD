@@ -1,0 +1,4 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{vue,js,ts,jsx,tsx}';
+
+@import 'tw-animate-css';
