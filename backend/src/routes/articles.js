@@ -45,13 +45,18 @@ router.get('/', (req, res) => {
  * 获取文章详情
  */
 router.get('/:id', optionalAuthenticate, (req, res) => {
-  const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(req.params.id);
+  const idAliasMap = {
+    'support-guide': 'how-to-support',
+  };
+  const canonicalId = idAliasMap[req.params.id] || req.params.id;
+
+  const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(canonicalId);
   if (!article) {
     return res.status(404).json({ success: false, message: '文章不存在' });
   }
 
   // 增加阅读量
-  db.prepare('UPDATE articles SET read_count = read_count + 1 WHERE id = ?').run(req.params.id);
+  db.prepare('UPDATE articles SET read_count = read_count + 1 WHERE id = ?').run(canonicalId);
 
   res.json({ success: true, data: article });
 });

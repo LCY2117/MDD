@@ -14,11 +14,11 @@ const showComingSoon = ref(false)
 const plans = [
   {
     id: 'free', label: '免费版', price: '¥0', period: '/月',
-    features: ['内容浏览', '情绪记录（7天）', '参与社区讨论', 'AI基础对话（每天5次）'],
+    features: ['内容浏览', '情绪记录（7天）', '参与社区讨论', 'AI基础对话（每天100次）'],
     isCurrent: true,
   },
   {
-    id: 'pro', label: '心语会员', price: '¥18', period: '/月',
+    id: 'pro', label: '心语会员', price: '¥8', period: '/月',
     features: ['所有免费功能', '无限情绪记录', '无限日记', 'AI助理无限次对话', '家属关怀模式', '专属会员徽章', '每月3次专家答疑'],
     recommended: true, isCurrent: false,
   },

@@ -29,12 +29,12 @@ const moods = [
 const quickActionsAll = [
   { icon: Bot, label: 'AI问答', to: '/ai-chat', color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20' },
   { icon: Heart, label: '情绪记录', to: '/mood', color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' },
-  { icon: BookOpen, label: '知识科普', to: '/community', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+  { icon: BookOpen, label: '知识科普', to: '/resources', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
   { icon: Phone, label: '紧急求助', to: '/help', color: 'bg-primary/10 text-primary' },
 ]
 const quickActions = computed(() => isAuthenticated.value
   ? quickActionsAll
-  : quickActionsAll.filter(a => ['/community', '/help'].includes(a.to))
+  : quickActionsAll.filter(a => ['/resources', '/help'].includes(a.to))
 )
 
 onMounted(() => {

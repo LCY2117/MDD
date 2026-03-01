@@ -5,6 +5,16 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+function getBlockStatus(userA, userB) {
+  const blockedByMe = !!db.prepare(
+    'SELECT 1 FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?'
+  ).get(userA, userB);
+  const blockedByOther = !!db.prepare(
+    'SELECT 1 FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?'
+  ).get(userB, userA);
+  return { blockedByMe, blockedByOther, isBlocked: blockedByMe || blockedByOther };
+}
+
 /**
  * GET /api/messages/conversations
  * 获取私信会话列表
@@ -95,6 +105,10 @@ router.post('/:convId/message', authenticate, (req, res) => {
 
   const now = new Date().toISOString();
   const targetUserId = conv.user1_id === req.userId ? conv.user2_id : conv.user1_id;
+  const blockStatus = getBlockStatus(req.userId, targetUserId);
+  if (blockStatus.isBlocked) {
+    return res.status(403).json({ success: false, message: '当前无法发送消息（存在屏蔽关系）' });
+  }
 
   db.prepare('UPDATE conversations SET last_message = ?, last_message_time = ? WHERE id = ?')
     .run(content.trim(), now, conv.id);
@@ -103,13 +117,6 @@ router.post('/:convId/message', authenticate, (req, res) => {
   db.prepare(
     'INSERT INTO direct_messages (id, conversation_id, sender_id, content, is_read, created_at) VALUES (?, ?, ?, ?, 0, ?)'
   ).run(msgId, conv.id, req.userId, content.trim(), now);
-
-  // 通知对方
-  const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
-  db.prepare(`
-    INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
-    VALUES (?, ?, 'message', ?, ?, 0, ?)
-  `).run(notifId, targetUserId, req.userId, `给你发了一条私信：${content.trim().slice(0, 30)}${content.trim().length > 30 ? '...' : ''}`, now);
 
   res.status(201).json({
     success: true,
@@ -143,6 +150,11 @@ router.post('/conversations/:userId', authenticate, (req, res) => {
     return res.status(400).json({ success: false, message: '不能给自己发消息' });
   }
 
+  const blockStatus = getBlockStatus(req.userId, targetUserId);
+  if (blockStatus.isBlocked) {
+    return res.status(403).json({ success: false, message: '当前无法发送消息（存在屏蔽关系）' });
+  }
+
   // 查找或创建会话
   const [u1, u2] = [req.userId, targetUserId].sort();
   let conv = db.prepare('SELECT * FROM conversations WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)').get(u1, u2, u2, u1);
@@ -162,13 +174,6 @@ router.post('/conversations/:userId', authenticate, (req, res) => {
   db.prepare('INSERT INTO direct_messages (id, conversation_id, sender_id, content, is_read, created_at) VALUES (?, ?, ?, ?, 0, ?)').run(
     msgId, conv.id, req.userId, content.trim(), now
   );
-
-  // 发送通知
-  const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
-  db.prepare(`
-    INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
-    VALUES (?, ?, 'message', ?, ?, 0, ?)
-  `).run(notifId, targetUserId, req.userId, `给你发了一条私信：${content.trim().slice(0, 30)}${content.trim().length > 30 ? '...' : ''}`, now);
 
   res.status(201).json({
     success: true,
@@ -193,7 +198,7 @@ router.get('/notifications', authenticate, (req, res) => {
       (SELECT SUBSTR(p.content, 1, 50) FROM posts p WHERE p.id = n.related_post_id) as post_preview
     FROM notifications n
     LEFT JOIN users u ON n.from_user_id = u.id
-    WHERE n.user_id = ?
+    WHERE n.user_id = ? AND n.type != 'message'
     ORDER BY n.created_at DESC LIMIT 50
   `).all(req.userId);
 
@@ -261,6 +266,52 @@ router.get('/conversation-with/:userId', authenticate, (req, res) => {
     'SELECT id FROM conversations WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)'
   ).get(u1, u2, u2, u1);
   res.json({ success: true, data: { conversationId: conv ? conv.id : null } });
+});
+
+/**
+ * GET /api/messages/block-status/:userId
+ * 获取与某用户的屏蔽状态
+ */
+router.get('/block-status/:userId', authenticate, (req, res) => {
+  const { userId } = req.params;
+  if (userId === req.userId) {
+    return res.json({ success: true, data: { blockedByMe: false, blockedByOther: false, isBlocked: false } });
+  }
+
+  const targetUser = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!targetUser) {
+    return res.status(404).json({ success: false, message: '用户不存在' });
+  }
+
+  res.json({ success: true, data: getBlockStatus(req.userId, userId) });
+});
+
+/**
+ * POST /api/messages/block/:userId
+ * 设置/取消屏蔽某用户
+ */
+router.post('/block/:userId', authenticate, (req, res) => {
+  const { userId } = req.params;
+  const { blocked = true } = req.body ?? {};
+
+  if (userId === req.userId) {
+    return res.status(400).json({ success: false, message: '不能屏蔽自己' });
+  }
+
+  const targetUser = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!targetUser) {
+    return res.status(404).json({ success: false, message: '用户不存在' });
+  }
+
+  if (blocked) {
+    db.prepare(
+      'INSERT OR IGNORE INTO user_blocks (blocker_id, blocked_id, created_at) VALUES (?, ?, ?)'
+    ).run(req.userId, userId, new Date().toISOString());
+  } else {
+    db.prepare('DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?').run(req.userId, userId);
+  }
+
+  res.json({ success: true, message: blocked ? '已屏蔽该用户' : '已取消屏蔽', data: getBlockStatus(req.userId, userId) });
 });
 
 export default router;

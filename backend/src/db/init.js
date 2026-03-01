@@ -168,11 +168,21 @@ db.exec(`
     FOREIGN KEY (sender_id) REFERENCES users(id)
   );
 
+  -- 屏蔽关系表
+  CREATE TABLE IF NOT EXISTS user_blocks (
+    blocker_id TEXT NOT NULL,
+    blocked_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (blocker_id, blocked_id),
+    FOREIGN KEY (blocker_id) REFERENCES users(id),
+    FOREIGN KEY (blocked_id) REFERENCES users(id)
+  );
+
   -- 通知表
   CREATE TABLE IF NOT EXISTS notifications (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('like', 'comment', 'follow', 'system', 'family')),
+    type TEXT NOT NULL CHECK(type IN ('like', 'comment', 'follow', 'system', 'family', 'message')),
     from_user_id TEXT,
     content TEXT NOT NULL,
     related_post_id TEXT,
@@ -259,6 +269,36 @@ db.exec(`
 // 迁移：旧库可能缺少新增列
 try { db.exec(`ALTER TABLE user_settings ADD COLUMN privacy_hide_profile INTEGER DEFAULT 0`); } catch {}
 try { db.exec(`ALTER TABLE user_settings ADD COLUMN privacy_allow_follow INTEGER DEFAULT 1`); } catch {}
+
+// 迁移：notifications.type 约束补充 message（旧库可能缺失）
+try {
+  const tableSqlRow = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notifications'").get();
+  const tableSql = (tableSqlRow?.sql || '').toLowerCase();
+  if (tableSql && !tableSql.includes("'message'")) {
+    db.exec(`
+      CREATE TABLE notifications_new (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('like', 'comment', 'follow', 'system', 'family', 'message')),
+        from_user_id TEXT,
+        content TEXT NOT NULL,
+        related_post_id TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (from_user_id) REFERENCES users(id),
+        FOREIGN KEY (related_post_id) REFERENCES posts(id) ON DELETE SET NULL
+      );
+
+      INSERT INTO notifications_new (id, user_id, type, from_user_id, content, related_post_id, is_read, created_at)
+      SELECT id, user_id, type, from_user_id, content, related_post_id, is_read, created_at
+      FROM notifications;
+
+      DROP TABLE notifications;
+      ALTER TABLE notifications_new RENAME TO notifications;
+    `);
+  }
+} catch {}
 
 // 插入种子数据
 const insertSeedData = db.transaction(() => {

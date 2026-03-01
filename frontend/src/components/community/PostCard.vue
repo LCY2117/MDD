@@ -22,7 +22,7 @@ export interface Post {
   createdAt: string
 }
 
-const props = defineProps<{ post: Post; canDelete?: boolean }>()
+const props = defineProps<{ post: Post; canDelete?: boolean; showMessageAction?: boolean }>()
 const emit = defineEmits<{
   like: [postId: string]
   favorite: [postId: string]
@@ -78,7 +78,7 @@ function menuAction(action: string, e: Event) {
               <Bookmark class="w-4 h-4" :class="post.isFavorited ? 'text-amber-500 fill-amber-500' : ''" />
               {{ post.isFavorited ? '取消收藏' : '收藏帖子' }}
             </button>
-            <button v-if="!post.author.isAnonymous && post.author.id && post.author.id !== auth.user?.id" class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors" @click="menuAction('message', $event)">
+            <button v-if="props.showMessageAction !== false && !post.author.isAnonymous && post.author.id && post.author.id !== auth.user?.id" class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors" @click="menuAction('message', $event)">
               <MessageSquare class="w-4 h-4" />私信博主
             </button>
             <button v-if="canDelete" class="w-full flex items-center gap-2.5 px-4 py-3 text-sm hover:bg-secondary transition-colors text-destructive" @click="menuAction('delete', $event)">

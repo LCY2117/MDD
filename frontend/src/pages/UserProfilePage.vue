@@ -23,7 +23,9 @@ const isFollowLoading = ref(false)
 onMounted(async () => {
   try {
     const [userRes, postsRes] = await Promise.all([userApi.getUser(userId), postApi.getUserPosts(userId)])
-    user.value = (userRes.data as unknown as UserInfo)
+    const userData = userRes.data as unknown as (UserInfo & { isFollowing?: boolean })
+    user.value = userData
+    isFollowing.value = !!userData.isFollowing
     posts.value = (postsRes.data as { posts: Post[] }).posts
   } catch { toast.error('加载失败') }
   finally { isLoading.value = false }
@@ -35,7 +37,9 @@ async function toggleFollow() {
   try {
     const res = await userApi.toggleFollow(userId)
     isFollowing.value = (res.data as { isFollowing: boolean }).isFollowing
-    if (user.value) user.value.followerCount += isFollowing.value ? 1 : -1
+    if (user.value?.stats) {
+      user.value.stats.followers += isFollowing.value ? 1 : -1
+    }
   } catch { toast.error('操作失败') }
   finally { isFollowLoading.value = false }
 }
@@ -108,7 +112,7 @@ async function handleFavorite(postId: string) {
       <div class="px-6 py-4">
         <h4 class="mb-3">他的帖子（{{ posts.length }}）</h4>
         <div v-if="posts.length" class="space-y-3">
-          <PostCard v-for="post in posts" :key="post.id" :post="post" @like="handleLike" @favorite="handleFavorite" />
+          <PostCard v-for="post in posts" :key="post.id" :post="post" :show-message-action="false" @like="handleLike" @favorite="handleFavorite" />
         </div>
         <div v-else class="text-center py-8 text-muted-foreground text-sm">还没有发帖</div>
       </div>

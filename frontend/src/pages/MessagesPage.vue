@@ -18,10 +18,24 @@ interface Conversation {
 }
 
 const conversations = ref<Conversation[]>([])
-const notifications = ref<Array<{ id: string; type: string; content: string; createdAt: string; isRead: boolean }>>([])
+interface NotificationItem {
+  id: string
+  type: string
+  content: string
+  createdAt: string
+  isRead: boolean
+  relatedPostId?: string | null
+  from?: { id: string; name: string; avatar?: string } | null
+}
+
+const notifications = ref<NotificationItem[]>([])
 const isLoading = ref(true)
 const activeTab = ref<'messages' | 'notifications'>('messages')
 const unreadCount = ref(0)
+
+function updateUnreadCount() {
+  unreadCount.value = notifications.value.filter(n => !n.isRead).length
+}
 
 onMounted(async () => {
   if (!auth.isAuthenticated) { isLoading.value = false; return }
@@ -35,11 +49,35 @@ onMounted(async () => {
       lastMessage: { content: c.lastMessage ?? c.last_message ?? '', createdAt: c.lastMessageTime ?? c.last_message_time ?? '' },
       unreadCount: c.unreadCount ?? 0,
     }))
-    notifications.value = (notifRes.data as any[]) ?? []
-    unreadCount.value = notifications.value.filter(n => !n.isRead).length
+    notifications.value = (notifRes.data as NotificationItem[]) ?? []
+    updateUnreadCount()
   } catch { toast.error('加载失败') }
   finally { isLoading.value = false }
 })
+
+async function markAllRead() {
+  if (!unreadCount.value) return
+  try {
+    await messageApi.markAllRead()
+    notifications.value = notifications.value.map(n => ({ ...n, isRead: true }))
+    updateUnreadCount()
+    toast.success('已全部标为已读')
+  } catch {
+    toast.error('操作失败')
+  }
+}
+
+function getNotifLink(notif: NotificationItem): string | null {
+  if ((notif.type === 'like' || notif.type === 'comment') && notif.relatedPostId) return `/post/${notif.relatedPostId}`
+  if (notif.type === 'follow' && notif.from?.id) return `/user/${notif.from.id}`
+  if (notif.type === 'family') return '/family'
+  return null
+}
+
+function handleNotifClick(notif: NotificationItem) {
+  const link = getNotifLink(notif)
+  if (link) router.push(link)
+}
 
 function formatTime(dateStr: string) {
   const d = new Date(dateStr)
@@ -57,7 +95,16 @@ function formatTime(dateStr: string) {
     <div class="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-6 py-4 border-b border-border/50">
       <div class="flex items-center justify-between mb-3">
         <h1>消息</h1>
-        <button v-if="unreadCount" class="px-3 py-1 bg-primary/10 rounded-full text-xs text-primary">{{ unreadCount }} 条未读</button>
+        <div class="flex items-center gap-2">
+          <button v-if="unreadCount" class="px-3 py-1 bg-primary/10 rounded-full text-xs text-primary">{{ unreadCount }} 条未读</button>
+          <button
+            v-if="activeTab === 'notifications' && unreadCount"
+            class="px-3 py-1 bg-secondary rounded-full text-xs hover:bg-accent transition-colors"
+            @click="markAllRead"
+          >
+            全部已读
+          </button>
+        </div>
       </div>
       <div class="flex gap-2">
         <button v-for="tab in [{ id: 'messages', label: '私信', icon: MessageSquare }, { id: 'notifications', label: '通知', icon: Bell }]" :key="tab.id"
@@ -105,14 +152,22 @@ function formatTime(dateStr: string) {
       <!-- 通知列表 -->
       <template v-else>
         <div v-if="notifications.length" class="space-y-2">
-          <div v-for="notif in notifications" :key="notif.id"
-            class="bg-card rounded-2xl p-4 border border-border/50 flex items-start gap-3"
-            :class="{ 'border-primary/20 bg-primary/5': !notif.isRead }">
+          <div
+            v-for="notif in notifications"
+            :key="notif.id"
+            class="bg-card rounded-2xl p-4 border border-border/50 flex items-start gap-3 transition-colors"
+            :class="[
+              { 'border-primary/20 bg-primary/5': !notif.isRead },
+              getNotifLink(notif) ? 'cursor-pointer hover:bg-secondary' : 'cursor-default'
+            ]"
+            @click="handleNotifClick(notif)"
+          >
             <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
               :class="notif.type === 'like' ? 'bg-rose-100 text-rose-500' : notif.type === 'comment' ? 'bg-blue-100 text-blue-500' : 'bg-primary/10 text-primary'">
               <Bell class="w-5 h-5" />
             </div>
             <div class="flex-1">
+              <p v-if="notif.from?.name" class="text-xs text-muted-foreground mb-0.5">{{ notif.from.name }}</p>
               <p class="text-sm">{{ notif.content }}</p>
               <span class="text-xs text-muted-foreground mt-1 block">{{ formatTime(notif.createdAt) }}</span>
             </div>

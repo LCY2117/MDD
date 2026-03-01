@@ -55,7 +55,7 @@ const faqs = [
       <h3>家庭关怀功能介绍</h3>
     </div>
 
-    <div class="px-6 py-6 space-y-6 max-w-lg mx-auto">
+    <div class="px-4 sm:px-6 py-6 space-y-6 w-full max-w-5xl mx-auto">
 
       <!-- 主横幅 -->
       <div class="bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20 rounded-2xl p-6 border border-rose-200/50 dark:border-rose-800/30 text-center">
@@ -69,7 +69,7 @@ const faqs = [
       </div>
 
       <!-- 两种角色说明 -->
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div class="bg-card rounded-2xl p-4 border-2 transition-colors" :class="isPatient ? 'border-primary/40 bg-primary/5' : 'border-border/50'">
           <div class="text-2xl mb-2">🌱</div>
           <h4 class="font-medium mb-1">患者本人</h4>
@@ -97,6 +97,13 @@ const faqs = [
           </div>
         </div>
       </div>
+
+      <button
+        class="w-full px-8 py-3 bg-secondary text-foreground rounded-xl hover:bg-accent transition-colors"
+        @click="router.push('/profile/edit')"
+      >
+        前往个人资料修改身份
+      </button>
 
       <!-- 功能详解 -->
       <div class="space-y-3">

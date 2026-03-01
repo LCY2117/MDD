@@ -267,6 +267,14 @@ export const messageApi = {
 
   /** 清空所有通知 */
   clearAllNotifications: () => api.delete<ApiResponse<null>>('/messages/notifications'),
+
+  /** 获取与某用户的屏蔽状态 */
+  getBlockStatus: (userId: string) =>
+    api.get<ApiResponse<{ blockedByMe: boolean; blockedByOther: boolean; isBlocked: boolean }>>(`/messages/block-status/${userId}`),
+
+  /** 设置或取消屏蔽 */
+  setBlocked: (userId: string, blocked: boolean) =>
+    api.post<ApiResponse<{ blockedByMe: boolean; blockedByOther: boolean; isBlocked: boolean }>>(`/messages/block/${userId}`, { blocked }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

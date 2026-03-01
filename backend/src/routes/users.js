@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/database.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuthenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -103,7 +103,7 @@ router.put('/me', authenticate, (req, res) => {
  * GET /api/users/:id
  * 获取指定用户公开信息
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', optionalAuthenticate, (req, res) => {
   const user = db.prepare(`
     SELECT u.id, u.nickname, u.avatar, u.bio, u.user_mode, u.join_date,
       (SELECT COUNT(*) FROM posts WHERE author_id = u.id AND is_anonymous = 0) as post_count,
@@ -117,6 +117,10 @@ router.get('/:id', (req, res) => {
     return res.status(404).json({ success: false, message: '用户不存在' });
   }
 
+  const isFollowing = req.userId
+    ? !!db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(req.userId, req.params.id)
+    : false;
+
   res.json({
     success: true,
     data: {
@@ -125,6 +129,7 @@ router.get('/:id', (req, res) => {
       avatar: user.avatar,
       bio: user.bio,
       joinDate: user.join_date,
+      isFollowing,
       stats: {
         posts: user.post_count,
         followers: user.follower_count,
@@ -190,12 +195,19 @@ router.post('/:id/follow', authenticate, (req, res) => {
       req.userId, targetId, new Date().toISOString()
     );
 
+    const follower = db.prepare('SELECT id, nickname, is_anonymous FROM users WHERE id = ?').get(req.userId);
+    const isAnonymousFollower = !!follower?.is_anonymous;
+    const notifContent = isAnonymousFollower
+      ? '一位匿名用户关注了你'
+      : `${follower?.nickname || '有用户'}关注了你`;
+    const fromUserId = isAnonymousFollower ? null : req.userId;
+
     // 发送通知
     const notifId = `notif_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
     db.prepare(`
       INSERT INTO notifications (id, user_id, type, from_user_id, content, is_read, created_at)
-      VALUES (?, ?, 'follow', ?, '关注了你', 0, ?)
-    `).run(notifId, targetId, req.userId, new Date().toISOString());
+      VALUES (?, ?, 'follow', ?, ?, 0, ?)
+    `).run(notifId, targetId, fromUserId, notifContent, new Date().toISOString());
 
     res.json({ success: true, message: '关注成功', data: { isFollowing: true } });
   }

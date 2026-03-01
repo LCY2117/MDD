@@ -33,7 +33,13 @@ const parsedContent = computed(() => {
 
 function goAiChat() {
   const q = article.value
-    ? `请帮我解读这篇文章《${article.value.title}》，用通俗易懂的语言讲解主要内容和关键知识点。`
+    ? [
+        `请帮我解读下面这篇文章，用通俗易懂的语言讲解主要内容和关键知识点，并给出可执行的建议。`,
+        `文章标题：${article.value.title}`,
+        `文章分类：${article.value.category}`,
+        `文章全文：`,
+        article.value.content,
+      ].join('\n\n')
     : ''
   router.push(q ? `/ai-chat?q=${encodeURIComponent(q)}` : '/ai-chat')
 }
